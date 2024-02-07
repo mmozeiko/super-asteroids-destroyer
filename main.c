@@ -36,7 +36,7 @@ typedef struct {
   int size;
 } Star;
 
-void draw_text(Font font, char *text, Vector2 position, Color color) {
+void draw_text(Font font, const char *text, Vector2 position, Color color) {
   int fontsize = 34;
   DrawTextEx(
       font, text,
@@ -91,6 +91,9 @@ int main() {
   Menu_State menu_state = play;
   int menu_state_index = 0;
 
+  int score = 0;
+  int energy = 3;
+
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
     UpdateMusicStream(menu_bgm);
@@ -134,6 +137,8 @@ int main() {
         Vector2 direction = {sin(radians), -cos(radians)};
         ship_velocity.x += direction.x * ship_acceleration.x * dt;
         ship_velocity.y += direction.y * ship_acceleration.y * dt;
+
+        score+=10;
       }
     }
     if (IsKeyPressed(KEY_W)) {
@@ -196,6 +201,14 @@ int main() {
     }
 
     if (game_state == playing) {
+    DrawRectangleLinesEx((Rectangle){0,0, 120, 40}, 5, GREEN);
+    for(int i = 0; i < energy; i++) {
+      DrawRectangleRec((Rectangle){5+(8*i)+(30*i),5, 30,30}, BLUE);
+    }
+
+
+    draw_text(font, TextFormat("Score %d", score), (Vector2){300, 10}, WHITE);
+
       DrawTexturePro(
           ship_texture,
           (Rectangle){0, 0, ship_texture.width, ship_texture.height},
@@ -206,7 +219,7 @@ int main() {
     }
 
     if(game_state == main_menu || game_state == controls_menu) {
-      /// @todo: for some reason gama title doesn't look like it's centered
+      /// @note: for some reason gama title doesn't look like it's centered
       /// that's why I added a 30 pixel left padding
       draw_text(font, game_title, (Vector2){half_screen_width + 30, 100}, WHITE);
     }
