@@ -19,7 +19,8 @@ typedef enum {
   play,
   controls,
   exit,
-  // sub menu
+  /// @todo: sub_menu? is there a better way to do this?
+  /// there is already a controls_menu
   controls_back,
 } Menu_State;
 
@@ -30,6 +31,8 @@ Menu_State menu_states[3] = {
 };
 
 Color AQUA = {0, 255, 255, 255};
+Color SEA_GREEN = {60, 179, 113, 255};
+Color ORANGE_RED = {255, 69, 0, 255};
 
 typedef struct {
   Vector2 position;
@@ -80,6 +83,9 @@ int main() {
     stars[i].size = GetRandomValue(1, 3);
   }
 
+  Texture2D meteor0_texture = LoadTexture("assets/meteor0.png");
+  Vector2 meteor_position = {half_screen_width, half_screen_height};
+
   Texture2D ship_texture = LoadTexture("assets/ship.png");
   Vector2 ship_position = {half_screen_width, half_screen_height};
   Vector2 ship_velocity = {0, 0};
@@ -96,8 +102,9 @@ int main() {
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
-    UpdateMusicStream(menu_bgm);
-    UpdateMusicStream(main_bgm);
+    /// @todo: uncomment this
+    // UpdateMusicStream(menu_bgm);
+    // UpdateMusicStream(main_bgm);
 
     if (music_fade_timer > 0) {
       music_fade_timer--;
@@ -138,10 +145,10 @@ int main() {
         ship_velocity.x += direction.x * ship_acceleration.x * dt;
         ship_velocity.y += direction.y * ship_acceleration.y * dt;
 
-        score+=10;
+        score += 10;
       }
     }
-    if (IsKeyPressed(KEY_W)) {
+    if (IsKeyPressed(KEY_W) && select_effect_timer == 0) {
       if (game_state == main_menu) {
         PlaySound(click_sfx);
         menu_state_index--;
@@ -150,7 +157,7 @@ int main() {
         menu_state = menu_states[menu_state_index];
       }
     }
-    if (IsKeyPressed(KEY_S)) {
+    if (IsKeyPressed(KEY_S) && select_effect_timer == 0) {
       if (game_state == main_menu) {
         PlaySound(click_sfx);
         menu_state_index++;
@@ -201,21 +208,35 @@ int main() {
     }
 
     if (game_state == playing) {
-    DrawRectangleLinesEx((Rectangle){0,0, 120, 40}, 5, GREEN);
-    for(int i = 0; i < energy; i++) {
-      DrawRectangleRec((Rectangle){5+(8*i)+(30*i),5, 30,30}, BLUE);
-    }
+      DrawTextureV(meteor0_texture, meteor_position, WHITE);
 
+      DrawTexturePro(ship_texture,
+        (Rectangle){0, 0, ship_texture.width, ship_texture.height},
+        (Rectangle){ship_position.x, ship_position.y, ship_texture.width, ship_texture.height},
+        (Vector2){ship_texture.width / 2.0, ship_texture.height / 2.0},
+        ship_rotation_deg, WHITE);
 
-    draw_text(font, TextFormat("Score %d", score), (Vector2){300, 10}, WHITE);
+      int x = 20, y = 10;
+      int width = 140, height = 40;
+      int width_gap = 4, height_gap = 5;
+      int thickness = 5;
+      Color color = SEA_GREEN;
+      switch(energy) {
+        case 2: color = ORANGE; break;
+        case 1: color = ORANGE_RED; break;
+      }
+      float energy_block_size = (width - thickness * 2 - width_gap * 4) / 3.0;
+      DrawRectangleLinesEx((Rectangle){x, y, width, height}, thickness, color);
+      for(int i = 0; i < energy; i++) {
+        DrawRectangleRec((Rectangle){
+            x + thickness + width_gap * (i + 1) + energy_block_size * i,
+            y + thickness + height_gap,
+            energy_block_size,
+            height - thickness * 2 - height_gap * 2,
+          }, color);
+      }
 
-      DrawTexturePro(
-          ship_texture,
-          (Rectangle){0, 0, ship_texture.width, ship_texture.height},
-          (Rectangle){ship_position.x, ship_position.y,
-                      ship_texture.width, ship_texture.height},
-          (Vector2){ship_texture.width / 2.0, ship_texture.height / 2.0},
-          ship_rotation_deg, WHITE);
+      draw_text(font, TextFormat("Score %d", score), (Vector2){280, 15}, WHITE);
     }
 
     if(game_state == main_menu || game_state == controls_menu) {
@@ -225,64 +246,36 @@ int main() {
     }
 
     if (game_state == main_menu) {
-      int effect_timer = 8 < select_effect_timer && 24 < select_effect_timer;
+      bool effect_timer = 8 < select_effect_timer && 24 < select_effect_timer;
 
-      draw_text(font, "Start",
-                (Vector2){half_screen_width, half_screen_height},
-                effect_timer         ? WHITE
-                : menu_state == play ? AQUA
-                                     : WHITE);
+      draw_text(font, "Start", (Vector2){half_screen_width, half_screen_height},
+                 menu_state == play && !effect_timer ? AQUA : WHITE);
       draw_text(
-          font, "Controls",
-          (Vector2){half_screen_width ,
-                    half_screen_height + 40},
-          effect_timer             ? WHITE
-          : menu_state == controls ? AQUA
-                                   : WHITE);
-      draw_text(font, "Exit",
-                (Vector2){half_screen_width,
-                          half_screen_height + 40 * 2},
+          font, "Controls", (Vector2){half_screen_width, half_screen_height + 40},
+          menu_state == controls && !effect_timer ? AQUA : WHITE);
+      draw_text(font, "Exit", (Vector2){half_screen_width, half_screen_height + 40 * 2},
+                menu_state == exit && !effect_timer ? AQUA : WHITE);
 
-                effect_timer         ? WHITE
-                : menu_state == exit ? AQUA
-                                     : WHITE);
     } else if (game_state == controls_menu) {
-      int effect_timer = 8 < select_effect_timer && 24 < select_effect_timer;
+      bool effect_timer = 8 < select_effect_timer && 24 < select_effect_timer;
 
       draw_text(font, "Controls", (Vector2){half_screen_width, half_screen_height - 130}, WHITE);
 
       draw_text(font, "Rotate", (Vector2){half_screen_width - 270, half_screen_height - 50}, WHITE);
-
       DrawTexture(key_a, half_screen_width - 400, half_screen_height + 60, WHITE);
-      DrawTexture(key_d,half_screen_width - 300, half_screen_height + 60, WHITE);
+      DrawTexture(key_d, half_screen_width - 300, half_screen_height + 60, WHITE);
 
-      draw_text(font, "Thrust",
-          (Vector2){half_screen_width - 100,
-                    half_screen_height - 50}, WHITE);
-
+      draw_text(font, "Thrust", (Vector2){half_screen_width - 100, half_screen_height - 50}, WHITE);
       DrawTexture(key_w, half_screen_width - 170, half_screen_height + 60, WHITE);
 
-      draw_text(
-          font, "Shoot",
-          (Vector2){half_screen_width + 100,
-                    half_screen_height - 50},
-          WHITE);
+      draw_text(font, "Shoot", (Vector2){half_screen_width + 100, half_screen_height - 50}, WHITE);
+      DrawTexture(key_space, half_screen_width + 30, half_screen_height + 60, WHITE);
 
-      DrawTexture(key_space,  half_screen_width + 30, half_screen_height + 60, WHITE);
+      draw_text(font, "Pause", (Vector2){half_screen_width + 250, half_screen_height - 50}, WHITE);
+      DrawTexture(key_enter, half_screen_width + 180, half_screen_height + 60, WHITE);
 
-      draw_text(font, "Pause",
-          (Vector2){half_screen_width + 250,
-                    half_screen_height - 50},
-          WHITE);
-
-      DrawTexture(key_enter,  half_screen_width + 180, half_screen_height + 60, WHITE);
-
-      draw_text(font, "< Back",
-                (Vector2){half_screen_width,
-                          half_screen_height + 300},
-                effect_timer                  ? WHITE
-                : menu_state == controls_back ? AQUA
-                                              : WHITE);
+      draw_text(font, "< Back", (Vector2){half_screen_width, half_screen_height + 300},
+                menu_state == controls_back && !effect_timer ? AQUA : WHITE);
     }
     EndDrawing();
   }
