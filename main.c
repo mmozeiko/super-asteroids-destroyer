@@ -39,6 +39,12 @@ typedef struct {
   int size;
 } Star;
 
+typedef struct {
+  Vector2 position;
+  Vector2 velocity;
+  Texture2D texture;
+} Meteor;
+
 void draw_text(Font font, const char *text, Vector2 position, Color color) {
   int fontsize = 34;
   DrawTextEx(
@@ -73,7 +79,7 @@ int main() {
   Texture2D key_enter = LoadTexture("assets/keyboard_enter.png");
   Texture2D key_space = LoadTexture("assets/keyboard_space.png");
 
-#define total_stars 100
+  #define total_stars 100
   Star stars[total_stars] = {};
   for (int i = 0; i < total_stars; i++) {
     stars[i].position = (Vector2){
@@ -84,8 +90,53 @@ int main() {
   }
 
   Texture2D meteor0_texture = LoadTexture("assets/meteor0.png");
-  Vector2 meteor_position = {half_screen_width, half_screen_height};
+  Texture2D meteor1_texture = LoadTexture("assets/meteor1.png");
+  Texture2D meteor2_texture = LoadTexture("assets/meteor2.png");
+  Texture2D meteor3_texture = LoadTexture("assets/meteor3.png");
+  /// @note: padding to keep the location 'inside' the screen boundaries
+  int spawn_padding = 30;
+  /// @note: offset to keep the location outside the screen
+  int spawn_offset = 30;
+  Vector2 meteor_spawn_locations[12] = {
+    /// @note: top
+    {spawn_padding, -spawn_offset},
+    {half_screen_width, -spawn_offset},
+    {screen_width - spawn_padding, -spawn_offset},
+    /// @note: right
+    {screen_width + spawn_offset, spawn_padding},
+    {screen_width + spawn_offset, half_screen_height},
+    {screen_width + spawn_offset, screen_height - spawn_padding},
+    /// @note: bottom
+    {spawn_padding, screen_height + spawn_offset},
+    {half_screen_width, screen_height + spawn_offset},
+    {screen_width - spawn_padding, screen_height + spawn_offset},
+    /// @note: left
+    {-spawn_offset, spawn_padding},
+    {-spawn_offset, half_screen_height},
+    {-spawn_offset, screen_height - spawn_padding},
+  };
+  #define total_meteors 20
+  Meteor meteors[total_meteors] = {};
+  for(int i = 0; i < total_meteors; i++) {
+    int location_index = GetRandomValue(0, 11);
+    meteors[i].position = meteor_spawn_locations[location_index];
 
+    meteors[i].velocity = (Vector2){
+      GetRandomValue(-300, 300),
+      GetRandomValue(-300, 300),
+    };
+
+    int texture_index = GetRandomValue(0, 3);
+    switch(texture_index) {
+      case 0: meteors[i].texture = meteor0_texture; break;
+      case 1: meteors[i].texture = meteor1_texture; break;
+      case 2: meteors[i].texture = meteor2_texture; break;
+      case 3: meteors[i].texture = meteor3_texture; break;
+    }
+  }
+
+  Vector2 meteor_position = {half_screen_width, half_screen_height};
+  Vector2 meteor_velocity = {0, -300};
   Texture2D ship_texture = LoadTexture("assets/ship.png");
   Vector2 ship_position = {half_screen_width, half_screen_height};
   Vector2 ship_velocity = {0, 0};
@@ -189,16 +240,21 @@ int main() {
       }
     }
 
-    ship_position.x += ship_velocity.x * dt;
-    ship_position.y += ship_velocity.y * dt;
-    ship_position.x = Wrap(ship_position.x, 0, screen_width);
-    ship_position.y = Wrap(ship_position.y, 0, screen_height);
+    if(game_state == playing) {
+      ship_position.x += ship_velocity.x * dt;
+      ship_position.y += ship_velocity.y * dt;
+      ship_position.x = Wrap(ship_position.x, 0, screen_width);
+      ship_position.y = Wrap(ship_position.y, 0, screen_height);
+
+      for(int i = 0; i < total_meteors; i++) {
+        meteors[i].position.x += meteors[i].velocity.x * dt;
+        meteors[i].position.y += meteors[i].velocity.y * dt;
+      }
+    }
 
     for (int i = 0; i < total_stars; i++) {
-      stars[i].position.x++;
-      stars[i].position.y++;
-      stars[i].position.x = Wrap(stars[i].position.x, 0, screen_width);
-      stars[i].position.y = Wrap(stars[i].position.y, 0, screen_height);
+      stars[i].position.x = Wrap(++stars[i].position.x, 0, screen_width);
+      stars[i].position.y = Wrap(++stars[i].position.y, 0, screen_height);
     }
 
     BeginDrawing();
@@ -208,7 +264,9 @@ int main() {
     }
 
     if (game_state == playing) {
-      DrawTextureV(meteor0_texture, meteor_position, WHITE);
+      for(int i = 0; i < total_meteors; i++) {
+        DrawTextureV(meteors[i].texture, meteors[i].position, WHITE);
+      }
 
       DrawTexturePro(ship_texture,
         (Rectangle){0, 0, ship_texture.width, ship_texture.height},
@@ -240,7 +298,7 @@ int main() {
     }
 
     if(game_state == main_menu || game_state == controls_menu) {
-      /// @note: for some reason gama title doesn't look like it's centered
+      /// @note: for some reason game title doesn't look like it's centered
       /// that's why I added a 30 pixel left padding
       draw_text(font, game_title, (Vector2){half_screen_width + 30, 100}, WHITE);
     }
