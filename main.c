@@ -25,9 +25,9 @@ typedef enum {
 } Menu_State;
 
 Menu_State menu_states[3] = {
-    play,
-    controls,
-    exit,
+  play,
+  controls,
+  exit,
 };
 
 Color AQUA = {0, 255, 255, 255};
@@ -46,11 +46,43 @@ typedef struct {
 } Meteor;
 
 void draw_text(Font font, const char *text, Vector2 position, Color color) {
-  int fontsize = 34;
-  DrawTextEx(
-      font, text,
-      (Vector2){position.x - (MeasureText(text, fontsize) / 2.0), position.y},
-      fontsize, 1, color);
+  int font_size = 34, spacing = 1;
+  DrawTextEx(font, text, (Vector2){position.x - (MeasureTextEx(font, text, font_size, spacing).x / 2.0), position.y}, font_size, spacing, color);
+}
+
+void spawn_meteor(Vector2 meteor_spawn_locations[12], Texture2D meteors_textures[4], Meteor *meteor) {
+  int location_index = GetRandomValue(0, 11);
+  meteor->position = meteor_spawn_locations[location_index];
+
+  float angle = 0;
+  switch(location_index) {
+    /// @note: this logic follows the spawn locations order!
+    /// top
+    case 0x0: angle = GetRandomValue(270, 270 + 60); break;
+    case 0x1: angle = GetRandomValue(190, 350); break;
+    case 0x2: angle = GetRandomValue(270 - 60, 270); break;
+    /// right:
+    case 0x3: angle = GetRandomValue(180, 180 + 60); break;
+    case 0x4: angle = GetRandomValue(100, 170); break;
+    case 0x5: angle = GetRandomValue(180 - 60, 180); break;
+    /// bottom:
+    case 0x6: angle = GetRandomValue(90 - 60, 90); break;
+    case 0x7: angle = GetRandomValue(10, 170); break;
+    case 0x8: angle = GetRandomValue(90, 90  + 60); break;
+    /// left:
+    case 0x9: angle = GetRandomValue(360 - 60, 360); break;
+    case 0xa: angle = GetRandomValue(280, 270 + 160); break;
+    case 0xb: angle = GetRandomValue(0, 60); break;
+  }
+  angle *= DEG2RAD;
+  int speed = GetRandomValue(50, 150);
+  meteor->velocity = (Vector2){
+    cos(angle) * speed,
+    -sin(angle) * speed,
+  };
+
+  int texture_index = GetRandomValue(0, 3);
+  meteor->texture = meteors_textures[0];
 }
 
 int main() {
@@ -89,10 +121,12 @@ int main() {
     stars[i].size = GetRandomValue(1, 3);
   }
 
-  Texture2D meteor0_texture = LoadTexture("assets/meteor0.png");
-  Texture2D meteor1_texture = LoadTexture("assets/meteor1.png");
-  Texture2D meteor2_texture = LoadTexture("assets/meteor2.png");
-  Texture2D meteor3_texture = LoadTexture("assets/meteor3.png");
+  Texture2D meteors_textures[4] = {
+    LoadTexture("assets/meteor0.png"),
+    LoadTexture("assets/meteor1.png"),
+    LoadTexture("assets/meteor2.png"),
+    LoadTexture("assets/meteor3.png"),
+  };
   /// @note: padding to keep the location 'inside' the screen boundaries
   int spawn_padding = 30;
   /// @note: offset to keep the location outside the screen
@@ -118,25 +152,9 @@ int main() {
   #define total_meteors 20
   Meteor meteors[total_meteors] = {};
   for(int i = 0; i < total_meteors; i++) {
-    int location_index = GetRandomValue(0, 11);
-    meteors[i].position = meteor_spawn_locations[location_index];
-
-    meteors[i].velocity = (Vector2){
-      GetRandomValue(-300, 300),
-      GetRandomValue(-300, 300),
-    };
-
-    int texture_index = GetRandomValue(0, 3);
-    switch(texture_index) {
-      case 0: meteors[i].texture = meteor0_texture; break;
-      case 1: meteors[i].texture = meteor1_texture; break;
-      case 2: meteors[i].texture = meteor2_texture; break;
-      case 3: meteors[i].texture = meteor3_texture; break;
-    }
+    spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
   }
 
-  Vector2 meteor_position = {half_screen_width, half_screen_height};
-  Vector2 meteor_velocity = {0, -300};
   Texture2D ship_texture = LoadTexture("assets/ship.png");
   Vector2 ship_position = {half_screen_width, half_screen_height};
   Vector2 ship_velocity = {0, 0};
@@ -249,6 +267,18 @@ int main() {
       for(int i = 0; i < total_meteors; i++) {
         meteors[i].position.x += meteors[i].velocity.x * dt;
         meteors[i].position.y += meteors[i].velocity.y * dt;
+
+        Rectangle top_despawn_zone = {-100, -200, screen_width + 200, 100};
+        Rectangle right_despawn_zone = {screen_width + 200, -100, 100, screen_height + 200};
+        Rectangle bottom_despawn_zone = {-100, screen_height + 200, screen_width + 200, 100};
+        Rectangle left_despawn_zone = {-100, -100, 100, screen_height + 200};
+        if(CheckCollisionCircleRec(meteors[i].position, 45, top_despawn_zone)
+        && CheckCollisionCircleRec(meteors[i].position, 45, right_despawn_zone)
+        && CheckCollisionCircleRec(meteors[i].position, 45, bottom_despawn_zone)
+        && CheckCollisionCircleRec(meteors[i].position, 45, left_despawn_zone)) {
+          TraceLog(LOG_WARNING, "Respawning meteor with index %d", i);
+          spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
+        }
       }
     }
 
@@ -265,7 +295,9 @@ int main() {
 
     if (game_state == playing) {
       for(int i = 0; i < total_meteors; i++) {
-        DrawTextureV(meteors[i].texture, meteors[i].position, WHITE);
+        Meteor meteor = meteors[i];
+        DrawTextureV(meteor.texture, meteor.position, WHITE);
+        DrawCircleLinesV((Vector2){meteor.position.x + 50, meteor.position.y + 50}, 45, BLUE);
       }
 
       DrawTexturePro(ship_texture,
@@ -298,9 +330,7 @@ int main() {
     }
 
     if(game_state == main_menu || game_state == controls_menu) {
-      /// @note: for some reason game title doesn't look like it's centered
-      /// that's why I added a 30 pixel left padding
-      draw_text(font, game_title, (Vector2){half_screen_width + 30, 100}, WHITE);
+      draw_text(font, game_title, (Vector2){half_screen_width, 100}, WHITE);
     }
 
     if (game_state == main_menu) {
