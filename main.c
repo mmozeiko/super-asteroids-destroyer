@@ -43,6 +43,7 @@ typedef struct {
   Vector2 position;
   Vector2 velocity;
   Texture2D texture;
+  int radius;
 } Meteor;
 
 void draw_text(Font font, const char *text, Vector2 position, Color color) {
@@ -51,6 +52,7 @@ void draw_text(Font font, const char *text, Vector2 position, Color color) {
 }
 
 void spawn_meteor(Vector2 meteor_spawn_locations[12], Texture2D meteors_textures[4], Meteor *meteor) {
+  meteor->radius = 45;
   int location_index = GetRandomValue(0, 11);
   meteor->position = meteor_spawn_locations[location_index];
 
@@ -75,14 +77,13 @@ void spawn_meteor(Vector2 meteor_spawn_locations[12], Texture2D meteors_textures
     case 0xb: angle = GetRandomValue(0, 60); break;
   }
   angle *= DEG2RAD;
-  int speed = GetRandomValue(50, 150);
+  int speed = GetRandomValue(50, 250);
   meteor->velocity = (Vector2){
     cos(angle) * speed,
     -sin(angle) * speed,
   };
 
-  int texture_index = GetRandomValue(0, 3);
-  meteor->texture = meteors_textures[0];
+  meteor->texture = meteors_textures[GetRandomValue(0, 3)];
 }
 
 int main() {
@@ -268,14 +269,18 @@ int main() {
         meteors[i].position.x += meteors[i].velocity.x * dt;
         meteors[i].position.y += meteors[i].velocity.y * dt;
 
-        Rectangle top_despawn_zone = {-100, -200, screen_width + 200, 100};
-        Rectangle right_despawn_zone = {screen_width + 200, -100, 100, screen_height + 200};
-        Rectangle bottom_despawn_zone = {-100, screen_height + 200, screen_width + 200, 100};
-        Rectangle left_despawn_zone = {-100, -100, 100, screen_height + 200};
-        if(CheckCollisionCircleRec(meteors[i].position, 45, top_despawn_zone)
-        && CheckCollisionCircleRec(meteors[i].position, 45, right_despawn_zone)
-        && CheckCollisionCircleRec(meteors[i].position, 45, bottom_despawn_zone)
-        && CheckCollisionCircleRec(meteors[i].position, 45, left_despawn_zone)) {
+        int despawn_horizontal_zone_width = 200 + screen_width + 200;
+        int despawn_vertical_zone_height = 200 + screen_height + 200;
+        int despawn_zone_size = 100;
+        Rectangle top_despawn_zone = {-200, -500, despawn_horizontal_zone_width, despawn_zone_size};
+        Rectangle right_despawn_zone = {screen_width + 500, -200, despawn_zone_size, despawn_vertical_zone_height};
+        Rectangle bottom_despawn_zone = {-200, screen_height + 500, despawn_horizontal_zone_width, despawn_zone_size};
+        Rectangle left_despawn_zone = {-500, -200, despawn_zone_size, despawn_vertical_zone_height};
+        
+        if(CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, top_despawn_zone)
+        || CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, right_despawn_zone)
+        || CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, bottom_despawn_zone)
+        || CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, left_despawn_zone)) {
           TraceLog(LOG_WARNING, "Respawning meteor with index %d", i);
           spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
         }
@@ -297,7 +302,7 @@ int main() {
       for(int i = 0; i < total_meteors; i++) {
         Meteor meteor = meteors[i];
         DrawTextureV(meteor.texture, meteor.position, WHITE);
-        DrawCircleLinesV((Vector2){meteor.position.x + 50, meteor.position.y + 50}, 45, BLUE);
+        DrawCircleLinesV((Vector2){meteor.position.x + meteor.texture.width / 2.0, meteor.position.y + meteor.texture.height / 2.0}, meteor.radius, BLUE);
       }
 
       DrawTexturePro(ship_texture,
