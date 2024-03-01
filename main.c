@@ -163,6 +163,8 @@ int main() {
   float ship_rotation_deg = 0;
   int rotation_speed = 500;
 
+  int slowmotion_timer = 0;
+
   Game_State game_state = main_menu;
   Menu_State menu_state = play;
   int menu_state_index = 0;
@@ -200,13 +202,19 @@ int main() {
       }
     }
 
+    bool is_slowmotion = slowmotion_timer > 0;
+    float slowmotion_factor = is_slowmotion ? 0.05 : 1;
+    if(is_slowmotion) {
+      slowmotion_timer--;
+    }
+
     if (IsKeyDown(KEY_A)) {
       if (game_state == playing)
-        ship_rotation_deg -= rotation_speed * dt;
+        ship_rotation_deg -= rotation_speed * dt * slowmotion_factor;
     }
     if (IsKeyDown(KEY_D)) {
       if (game_state == playing)
-        ship_rotation_deg += rotation_speed * dt;
+        ship_rotation_deg += rotation_speed * dt * slowmotion_factor;
     }
     if (IsKeyDown(KEY_W)) {
       if (game_state == playing) {
@@ -260,14 +268,14 @@ int main() {
     }
 
     if(game_state == playing) {
-      ship_position.x += ship_velocity.x * dt;
-      ship_position.y += ship_velocity.y * dt;
+      ship_position.x += ship_velocity.x * dt * slowmotion_factor;
+      ship_position.y += ship_velocity.y * dt * slowmotion_factor;
       ship_position.x = Wrap(ship_position.x, 0, screen_width);
       ship_position.y = Wrap(ship_position.y, 0, screen_height);
 
       for(int i = 0; i < total_meteors; i++) {
-        meteors[i].position.x += meteors[i].velocity.x * dt;
-        meteors[i].position.y += meteors[i].velocity.y * dt;
+        meteors[i].position.x += meteors[i].velocity.x * dt * slowmotion_factor;
+        meteors[i].position.y += meteors[i].velocity.y * dt * slowmotion_factor;
 
         int despawn_horizontal_zone_width = 200 + screen_width + 200;
         int despawn_vertical_zone_height = 200 + screen_height + 200;
@@ -276,13 +284,25 @@ int main() {
         Rectangle right_despawn_zone = {screen_width + 500, -200, despawn_zone_size, despawn_vertical_zone_height};
         Rectangle bottom_despawn_zone = {-200, screen_height + 500, despawn_horizontal_zone_width, despawn_zone_size};
         Rectangle left_despawn_zone = {-500, -200, despawn_zone_size, despawn_vertical_zone_height};
-        
+
         if(CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, top_despawn_zone)
         || CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, right_despawn_zone)
         || CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, bottom_despawn_zone)
         || CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, left_despawn_zone)) {
-          TraceLog(LOG_WARNING, "Respawning meteor with index %d", i);
+          // TraceLog(LOG_WARNING, "Respawning meteor with index %d", i);
           spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
+        }
+
+        if(CheckCollisionCircles((Vector2){meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0}, meteors[i].radius, ship_position, 10)) {
+          // TraceLog(LOG_WARNING, "Collision with meteor of index %d", i);
+          energy--;
+          if(energy == 0) game_state = game_over;
+          /// @todo: slowmotion
+          slowmotion_timer = 1.5 * 60;
+          /// @todo: camera shake
+          /// @todo: play particles explosion animation
+          spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
+          score += 100;
         }
       }
     }
@@ -302,7 +322,8 @@ int main() {
       for(int i = 0; i < total_meteors; i++) {
         Meteor meteor = meteors[i];
         DrawTextureV(meteor.texture, meteor.position, WHITE);
-        DrawCircleLinesV((Vector2){meteor.position.x + meteor.texture.width / 2.0, meteor.position.y + meteor.texture.height / 2.0}, meteor.radius, BLUE);
+        // DrawCircleLinesV((Vector2){meteor.position.x + meteor.texture.width / 2.0, meteor.position.y + meteor.texture.height / 2.0}, meteor.radius, BLUE);
+        // DrawText(TextFormat("X %.2f Y %.2f", meteor.position.x, meteor.position.y), meteor.position.x, meteor.position.y, 24, WHITE);
       }
 
       DrawTexturePro(ship_texture,
@@ -310,6 +331,8 @@ int main() {
         (Rectangle){ship_position.x, ship_position.y, ship_texture.width, ship_texture.height},
         (Vector2){ship_texture.width / 2.0, ship_texture.height / 2.0},
         ship_rotation_deg, WHITE);
+      // DrawCircleLinesV(ship_position, 10, BLUE);
+      // DrawText(TextFormat("X %.2f Y %.2f", ship_position.x, ship_position.y), ship_position.x, ship_position.y, 24, WHITE);
 
       int x = 20, y = 10;
       int width = 140, height = 40;
