@@ -42,8 +42,16 @@ typedef struct {
 typedef struct {
   Vector2 position;
   Vector2 velocity;
+  int timeout;
+} Explosion_Particle;
+
+#define total_explosion_particles 360
+typedef struct {
+  Vector2 position;
+  Vector2 velocity;
   Texture2D texture;
   int radius;
+  Explosion_Particle explosion_particle[total_explosion_particles];
 } Meteor;
 
 void draw_text(Font font, const char *text, Vector2 position, Color color) {
@@ -116,8 +124,8 @@ int main() {
   Star stars[total_stars] = {};
   for (int i = 0; i < total_stars; i++) {
     stars[i].position = (Vector2){
-        GetRandomValue(0, screen_width),
-        GetRandomValue(0, screen_height),
+      GetRandomValue(0, screen_width),
+      GetRandomValue(0, screen_height),
     };
     stars[i].size = GetRandomValue(1, 3);
   }
@@ -156,6 +164,13 @@ int main() {
     spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
   }
 
+  // #define total_explosion_particles 360
+  Explosion_Particle explosion_particles[total_explosion_particles] = {0};
+  for(int i = 0; i < total_explosion_particles; i++) {
+    explosion_particles[i] = (Explosion_Particle){{0,0}, {0,0}, 0};
+  }
+
+  Sound hurt_sfx = LoadSound("assets/hurt.wav");
   Texture2D ship_texture = LoadTexture("assets/ship.png");
   Vector2 ship_position = {half_screen_width, half_screen_height};
   Vector2 ship_velocity = {0, 0};
@@ -170,7 +185,11 @@ int main() {
   int menu_state_index = 0;
 
   int score = 0;
-  int energy = 3;
+  int energy = 30;
+
+  Texture2D planet_texture = LoadTexture("assets/planet.png");
+  Texture2D planet_gas_texture = LoadTexture("assets/planet_gas.png");
+  int gas_rotation = 0;
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
@@ -268,6 +287,18 @@ int main() {
     }
 
     if(game_state == playing) {
+      
+      for(int i = 0; i < total_explosion_particles; i++) {
+        if(explosion_particles[i].timeout > 0) {
+          explosion_particles[i].timeout--;
+          explosion_particles[i].position.x += explosion_particles[i].velocity.x * dt * slowmotion_factor;
+          explosion_particles[i].position.y += explosion_particles[i].velocity.y * dt * slowmotion_factor;
+        } else {
+          explosion_particles[i].position = (Vector2){-100, -100};
+          explosion_particles[i].velocity = (Vector2){0, 0};
+          // explosion_particles[i].timeout = 0;
+        }
+      }
       ship_position.x += ship_velocity.x * dt * slowmotion_factor;
       ship_position.y += ship_velocity.y * dt * slowmotion_factor;
       ship_position.x = Wrap(ship_position.x, 0, screen_width);
@@ -293,16 +324,25 @@ int main() {
           spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
         }
 
-        if(CheckCollisionCircles((Vector2){meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0}, meteors[i].radius, ship_position, 10)) {
+        Vector2 meteor_center = {meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0};
+        if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, 10)) {
+          for(int j = 0; j < total_explosion_particles; j++) {
+            float radians = j * DEG2RAD;
+            explosion_particles[j] = (Explosion_Particle){
+              meteor_center,
+              (Vector2){cos(radians) * GetRandomValue(50, 150), -sin(radians) * GetRandomValue(50, 150)},
+              3 * 60,
+            };
+          }
+          /// @todo: play particles explosion animation
+          /// @todo: camera shake
           // TraceLog(LOG_WARNING, "Collision with meteor of index %d", i);
           energy--;
           if(energy == 0) game_state = game_over;
-          /// @todo: slowmotion
           slowmotion_timer = 1.5 * 60;
-          /// @todo: camera shake
-          /// @todo: play particles explosion animation
           spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
           score += 100;
+          PlaySound(hurt_sfx);
         }
       }
     }
@@ -318,12 +358,28 @@ int main() {
       DrawCircleV(stars[i].position, stars[i].size, GRAY);
     }
 
+    DrawTextureV(planet_texture, (Vector2){half_screen_width - 200, half_screen_height - 100}, WHITE);
+    // DrawTextureEx(planet_gas_texture, (Vector2){half_screen_width - 100, half_screen_height}, gas_rotation, 1, WHITE);
+    DrawTexturePro(planet_gas_texture, 
+      (Rectangle){0, 0, planet_gas_texture.width, planet_gas_texture.height}, 
+      (Rectangle){half_screen_width + 450, half_screen_height + 500, planet_gas_texture.width, planet_gas_texture.height}, 
+      (Vector2){planet_gas_texture.width / 2.0, planet_gas_texture.height / 2.0}, 
+      gas_rotation * .01, WHITE);
+    gas_rotation++;
+    if(gas_rotation * .01 > 360) gas_rotation = 0;
+
     if (game_state == playing) {
       for(int i = 0; i < total_meteors; i++) {
         Meteor meteor = meteors[i];
         DrawTextureV(meteor.texture, meteor.position, WHITE);
         // DrawCircleLinesV((Vector2){meteor.position.x + meteor.texture.width / 2.0, meteor.position.y + meteor.texture.height / 2.0}, meteor.radius, BLUE);
         // DrawText(TextFormat("X %.2f Y %.2f", meteor.position.x, meteor.position.y), meteor.position.x, meteor.position.y, 24, WHITE);
+      }
+
+      for(int i = 0; i < total_explosion_particles; i++) {
+        if(explosion_particles[i].timeout > 0) {
+          DrawCircleV(explosion_particles[i].position, 1, WHITE);
+        }
       }
 
       DrawTexturePro(ship_texture,
