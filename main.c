@@ -51,7 +51,7 @@ typedef struct {
   Vector2 velocity;
   Texture2D texture;
   int radius;
-  Explosion_Particle explosion_particle[total_explosion_particles];
+  Explosion_Particle explosion_particles[total_explosion_particles];
 } Meteor;
 
 void draw_text(Font font, const char *text, Vector2 position, Color color) {
@@ -165,10 +165,10 @@ int main() {
   }
 
   // #define total_explosion_particles 360
-  Explosion_Particle explosion_particles[total_explosion_particles] = {0};
-  for(int i = 0; i < total_explosion_particles; i++) {
-    explosion_particles[i] = (Explosion_Particle){{0,0}, {0,0}, 0};
-  }
+  // Explosion_Particle explosion_particles[total_explosion_particles] = {0};
+  // for(int i = 0; i < total_explosion_particles; i++) {
+  //   explosion_particles[i] = (Explosion_Particle){{0,0}, {0,0}, 0};
+  // }
 
   Sound hurt_sfx = LoadSound("assets/hurt.wav");
   Texture2D ship_texture = LoadTexture("assets/ship.png");
@@ -242,6 +242,7 @@ int main() {
         ship_velocity.x += direction.x * ship_acceleration.x * dt;
         ship_velocity.y += direction.y * ship_acceleration.y * dt;
 
+        /// @todo: input is not affected by slowdown
         score += 10;
       }
     }
@@ -287,18 +288,6 @@ int main() {
     }
 
     if(game_state == playing) {
-      
-      for(int i = 0; i < total_explosion_particles; i++) {
-        if(explosion_particles[i].timeout > 0) {
-          explosion_particles[i].timeout--;
-          explosion_particles[i].position.x += explosion_particles[i].velocity.x * dt * slowmotion_factor;
-          explosion_particles[i].position.y += explosion_particles[i].velocity.y * dt * slowmotion_factor;
-        } else {
-          explosion_particles[i].position = (Vector2){-100, -100};
-          explosion_particles[i].velocity = (Vector2){0, 0};
-          // explosion_particles[i].timeout = 0;
-        }
-      }
       ship_position.x += ship_velocity.x * dt * slowmotion_factor;
       ship_position.y += ship_velocity.y * dt * slowmotion_factor;
       ship_position.x = Wrap(ship_position.x, 0, screen_width);
@@ -307,6 +296,18 @@ int main() {
       for(int i = 0; i < total_meteors; i++) {
         meteors[i].position.x += meteors[i].velocity.x * dt * slowmotion_factor;
         meteors[i].position.y += meteors[i].velocity.y * dt * slowmotion_factor;
+
+        for(int j = 0; j < total_explosion_particles; j++) {
+          if(meteors[i].explosion_particles[j].timeout > 0) {
+            meteors[i].explosion_particles[j].timeout--;
+            meteors[i].explosion_particles[j].position.x += meteors[i].explosion_particles[j].velocity.x * dt * slowmotion_factor;
+            meteors[i].explosion_particles[j].position.y += meteors[i].explosion_particles[j].velocity.y * dt * slowmotion_factor;
+          } else if(meteors[i].explosion_particles[j].timeout == 0) {
+            meteors[i].explosion_particles[j].position = (Vector2){-100, -100};
+            meteors[i].explosion_particles[j].velocity = (Vector2){0, 0};
+            meteors[i].explosion_particles[j].timeout = -1;
+          }
+        }
 
         int despawn_horizontal_zone_width = 200 + screen_width + 200;
         int despawn_vertical_zone_height = 200 + screen_height + 200;
@@ -328,7 +329,7 @@ int main() {
         if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, 10)) {
           for(int j = 0; j < total_explosion_particles; j++) {
             float radians = j * DEG2RAD;
-            explosion_particles[j] = (Explosion_Particle){
+            meteors[i].explosion_particles[j] = (Explosion_Particle){
               meteor_center,
               (Vector2){cos(radians) * GetRandomValue(50, 150), -sin(radians) * GetRandomValue(50, 150)},
               3 * 60,
@@ -370,15 +371,13 @@ int main() {
 
     if (game_state == playing) {
       for(int i = 0; i < total_meteors; i++) {
-        Meteor meteor = meteors[i];
-        DrawTextureV(meteor.texture, meteor.position, WHITE);
+        DrawTextureV(meteors[i].texture, meteors[i].position, WHITE);
         // DrawCircleLinesV((Vector2){meteor.position.x + meteor.texture.width / 2.0, meteor.position.y + meteor.texture.height / 2.0}, meteor.radius, BLUE);
         // DrawText(TextFormat("X %.2f Y %.2f", meteor.position.x, meteor.position.y), meteor.position.x, meteor.position.y, 24, WHITE);
-      }
-
-      for(int i = 0; i < total_explosion_particles; i++) {
-        if(explosion_particles[i].timeout > 0) {
-          DrawCircleV(explosion_particles[i].position, 1, WHITE);
+        for(int j = 0; j < total_explosion_particles; j++) {
+          if(meteors[i].explosion_particles[j].timeout > 0) {
+            DrawCircleV(meteors[i].explosion_particles[j].position, 1, WHITE);
+          }
         }
       }
 
@@ -414,6 +413,7 @@ int main() {
     }
 
     if(game_state == main_menu || game_state == controls_menu) {
+      /// @todo: wave letters
       draw_text(font, game_title, (Vector2){half_screen_width, 100}, WHITE);
     }
 
