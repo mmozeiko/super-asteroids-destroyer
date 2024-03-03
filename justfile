@@ -1,2 +1,2 @@
 just:
-  mkdir -p build && clang main.c -o build/main -lraylib -lm && ./build/main
+  mkdir -p build && clang -Wshadow -Werror main.c -o build/main -lraylib -lm && ./build/main
