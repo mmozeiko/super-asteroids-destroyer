@@ -43,6 +43,12 @@ typedef struct {
   Vector2 position;
   Vector2 velocity;
   int timeout;
+} Fire_Particle;
+
+typedef struct {
+  Vector2 position;
+  Vector2 velocity;
+  int timeout;
 } Explosion_Particle;
 
 #define total_explosion_particles 360
@@ -188,9 +194,12 @@ int main() {
   float ship_rotation_deg = 0;
   int rotation_speed = 500;
 
+  #define total_fire_particles 200
+  Fire_Particle fire_particles[total_fire_particles] = {};
+
   int slowmotion_timer = 0;
 
-  Game_State game_state = game_over;
+  Game_State game_state = main_menu;
   Menu_State menu_state = play;
   int menu_state_index = 0;
 
@@ -260,6 +269,13 @@ int main() {
 
         /// @todo: input is not affected by slowdown
         score += 10;
+        for(int i = 0; i < total_fire_particles; i++) {
+          fire_particles[i].position = (Vector2){GetRandomValue(ship_position.x - 5, ship_position.x + 5), GetRandomValue(ship_position.y - 5, ship_position.y + 5)};
+          fire_particles[i].velocity = (Vector2){direction.x * 100 * -5, direction.y * 100 * -5};
+          fire_particles[i].position.x += fire_particles[i].velocity.x * dt * slowmotion_factor;
+          fire_particles[i].position.y += fire_particles[i].velocity.y * dt * slowmotion_factor;
+          fire_particles[i].timeout = 0.1 * 60;
+        }
       }
     }
     if(IsKeyPressed(KEY_SPACE)) {
@@ -347,6 +363,23 @@ int main() {
       ship_position.x = Wrap(ship_position.x, 0, screen_width);
       ship_position.y = Wrap(ship_position.y, 0, screen_height);
 
+      for(int i = 0; i < total_fire_particles; i++) {
+        if(fire_particles[i].timeout > 0) {
+      //     fire_particles[i].position.x += fire_particles[i].velocity.x * dt * slowmotion_factor;
+      //     fire_particles[i].position.y += fire_particles[i].velocity.y * dt * slowmotion_factor;
+      //     // Vector2 norm_pos = Vector2Normalize(fire_particles[i].position);
+      //     // fire_particles[i].position = (Vector2){
+      //     //   Clamp(fire_particles[i].position.x, fire_particles[i].position.x, norm_pos.x * 5),
+      //     //   Clamp(fire_particles[i].position.y, fire_particles[i].position.y, norm_pos.y * 5),
+      //     // };
+          fire_particles[i].timeout--;
+        } else if(fire_particles[i].timeout == 0) {
+      //     fire_particles[i].position = (Vector2){-100, -100};
+      //     fire_particles[i].velocity = (Vector2){0, 0};
+          fire_particles[i].timeout = -1;
+        }
+      }
+
       for(int i = 0; i < total_bullets; i++) {
         bullets[i].position.x += bullets[i].velocity.x * dt * slowmotion_factor;
         bullets[i].position.y += bullets[i].velocity.y * dt * slowmotion_factor;
@@ -394,17 +427,19 @@ int main() {
         if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, 10)) {
           for(int j = 0; j < total_explosion_particles; j++) {
             float radians = j * DEG2RAD;
+            // meteors[i].explosion_particles[j].position = meteor_center;
+            // create_particle(radians, &(meteors[i].explosion_particles[j]));
             meteors[i].explosion_particles[j] = (Explosion_Particle){
               meteor_center,
               (Vector2){cos(radians) * GetRandomValue(50, 150), -sin(radians) * GetRandomValue(50, 150)},
-              3 * 60,
+              1 * 60,
             };
           }
           /// @todo: camera shake
           // TraceLog(LOG_WARNING, "Collision with meteor of index %d", i);
           energy--;
           if(energy == 0) game_state = game_over;
-          slowmotion_timer = 1.5 * 60;
+          slowmotion_timer = 1 * 60;
           spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
           score += 100;
           PlaySound(hurt_sfx);
@@ -423,10 +458,12 @@ int main() {
             };
             for(int k = 0; k < total_explosion_particles; k++) {
               float radians = k * DEG2RAD;
+              // meteors[i].explosion_particles[j].position = meteor_center;
+              // create_particle(radians, &(meteors[i].explosion_particles[j]));
               meteors[i].explosion_particles[k] = (Explosion_Particle){
                 meteor_center,
                 (Vector2){cos(radians) * GetRandomValue(50, 150), -sin(radians) * GetRandomValue(50, 150)},
-                3 * 60,
+                1 * 60,
               };
             }
           }
@@ -467,6 +504,11 @@ int main() {
         }
       }
 
+      for(int i = 0; i < total_fire_particles; i++) {
+        if(fire_particles[i].timeout > 0)
+          DrawCircleV(fire_particles[i].position, 2, RED);
+      }
+
       for(int i = 0; i < total_bullets; i++) {
         Bullet bullet = bullets[i];
         Vector2 bullet_position = bullet.position;
@@ -482,7 +524,7 @@ int main() {
         (Rectangle){ship_position.x, ship_position.y, ship_texture.width, ship_texture.height},
         (Vector2){ship_texture.width / 2.0, ship_texture.height / 2.0},
         ship_rotation_deg, WHITE);
-      DrawCircleV(ship_position, 3, MAGENTA);
+      // DrawCircleV(ship_position, 3, MAGENTA);
       // DrawText(TextFormat("X %.2f Y %.2f", ship_position.x, ship_position.y), ship_position.x, ship_position.y, 24, WHITE);
 
       int x = 20, y = 10;
