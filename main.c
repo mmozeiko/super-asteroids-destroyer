@@ -21,6 +21,11 @@ typedef enum {
   exit,
   /// @todo: sub_menu? is there a better way to do this?
   /// there is already a controls_menu
+  /// maybe not ideal but create another enum
+  /// with just this option, since there is only one option
+  /// on the controls menu, or maybe just a boolean
+  /// the real problem is that the selection
+  /// is just one variable, which makes sense.
   controls_back,
 } Menu_State;
 
@@ -65,7 +70,6 @@ typedef struct {
   Vector2 velocity;
   int radius;
   float rotation;
-  bool on_screen;
 } Bullet;
 
 void draw_text(Font font, const char *text, Vector2 position, Color color) {
@@ -106,6 +110,12 @@ void spawn_meteor(Vector2 meteor_spawn_locations[12], Texture2D meteors_textures
   };
 
   meteor->texture = meteors_textures[GetRandomValue(0, 3)];
+
+  // for(int i = 0; i < total_explosion_particles; i++) {
+  //   meteor->explosion_particles[i].position = (Vector2){-100, -100};
+  //   meteor->explosion_particles[i].velocity = (Vector2){0, 0};
+  //   meteor->explosion_particles[i].timeout = -1;
+  // }
 }
 
 int main() {
@@ -287,7 +297,6 @@ int main() {
           (Vector2){direction.x * 100 * 5, direction.y * 100 * 5},
           10,
           ship_rotation_deg,
-          true,
         };
         bullet_index = bullet_index >= total_bullets ? 0 : bullet_index + 1;
       }
@@ -352,7 +361,6 @@ int main() {
           bullets[i].position = (Vector2){-100, -100};
           bullets[i].velocity = (Vector2){0, 0};
           bullets[i].rotation = 0;
-          bullets[i].on_screen = false;
         }
       }
     }
@@ -388,8 +396,6 @@ int main() {
         || CheckCollisionCircleRec(bullets[i].position, bullets[i].radius, right_despawn_zone)
         || CheckCollisionCircleRec(bullets[i].position, bullets[i].radius, bottom_despawn_zone)
         || CheckCollisionCircleRec(bullets[i].position, bullets[i].radius, left_despawn_zone)) {
-          // TraceLog(LOG_WARNING, "Respawning meteor with index %d", i);
-          // spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
           bullets[i] = (Bullet){
             {-100, -100},
             {0, 0},
@@ -405,10 +411,12 @@ int main() {
 
         for(int j = 0; j < total_explosion_particles; j++) {
           if(meteors[i].explosion_particles[j].timeout > 0) {
-            meteors[i].explosion_particles[j].timeout--;
+            if(!is_slowmotion)
+              meteors[i].explosion_particles[j].timeout--;
             meteors[i].explosion_particles[j].position.x += meteors[i].explosion_particles[j].velocity.x * dt * slowmotion_factor;
             meteors[i].explosion_particles[j].position.y += meteors[i].explosion_particles[j].velocity.y * dt * slowmotion_factor;
           } else if(meteors[i].explosion_particles[j].timeout == 0) {
+            TraceLog(LOG_WARNING, "Resetting particle with id %d", j);
             meteors[i].explosion_particles[j].position = (Vector2){-100, -100};
             meteors[i].explosion_particles[j].velocity = (Vector2){0, 0};
             meteors[i].explosion_particles[j].timeout = -1;
@@ -427,8 +435,6 @@ int main() {
         if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, 10)) {
           for(int j = 0; j < total_explosion_particles; j++) {
             float radians = j * DEG2RAD;
-            // meteors[i].explosion_particles[j].position = meteor_center;
-            // create_particle(radians, &(meteors[i].explosion_particles[j]));
             meteors[i].explosion_particles[j] = (Explosion_Particle){
               meteor_center,
               (Vector2){cos(radians) * GetRandomValue(50, 150), -sin(radians) * GetRandomValue(50, 150)},
@@ -436,13 +442,11 @@ int main() {
             };
           }
           /// @todo: camera shake
-          // TraceLog(LOG_WARNING, "Collision with meteor of index %d", i);
-          energy--;
-          if(energy == 0) game_state = game_over;
-          slowmotion_timer = 1 * 60;
+          if(--energy == 0) game_state = game_over;
           spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
-          score += 100;
           PlaySound(hurt_sfx);
+          score += 100;
+          slowmotion_timer = 1 * 60;
         }
         for(int j = 0; j < total_bullets; j++) {
           if(CheckCollisionCircles(meteor_center, meteors[i].radius, bullets[j].position, bullets[j].radius)) {
@@ -454,12 +458,10 @@ int main() {
               {-100, -100},
               {0, 0},
               10,
-              false,
+              0,
             };
             for(int k = 0; k < total_explosion_particles; k++) {
               float radians = k * DEG2RAD;
-              // meteors[i].explosion_particles[j].position = meteor_center;
-              // create_particle(radians, &(meteors[i].explosion_particles[j]));
               meteors[i].explosion_particles[k] = (Explosion_Particle){
                 meteor_center,
                 (Vector2){cos(radians) * GetRandomValue(50, 150), -sin(radians) * GetRandomValue(50, 150)},
