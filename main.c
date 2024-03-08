@@ -110,12 +110,6 @@ void spawn_meteor(Vector2 meteor_spawn_locations[12], Texture2D meteors_textures
   };
 
   meteor->texture = meteors_textures[GetRandomValue(0, 3)];
-
-  // for(int i = 0; i < total_explosion_particles; i++) {
-  //   meteor->explosion_particles[i].position = (Vector2){-100, -100};
-  //   meteor->explosion_particles[i].velocity = (Vector2){0, 0};
-  //   meteor->explosion_particles[i].timeout = -1;
-  // }
 }
 
 int main() {
@@ -125,6 +119,9 @@ int main() {
   InitAudioDevice();
 
   Font font = LoadFontEx("assets/kenney_pixel.ttf", 34, 0, 250);
+  SetTextLineSpacing(34);
+
+  Font font_title = LoadFontEx("assets/not_jam_slab_14.ttf", 34, 0, 250);
   SetTextLineSpacing(34);
 
   Music main_bgm = LoadMusicStream("assets/stargaze.ogg");
@@ -225,6 +222,8 @@ int main() {
   #define total_bullets 100
   Bullet bullets[total_bullets] = {};
   int bullet_index = 0;
+
+  Shader wave_shader = LoadShader("assets/wave.vs", 0);
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
@@ -416,7 +415,7 @@ int main() {
             meteors[i].explosion_particles[j].position.x += meteors[i].explosion_particles[j].velocity.x * dt * slowmotion_factor;
             meteors[i].explosion_particles[j].position.y += meteors[i].explosion_particles[j].velocity.y * dt * slowmotion_factor;
           } else if(meteors[i].explosion_particles[j].timeout == 0) {
-            TraceLog(LOG_WARNING, "Resetting particle with id %d", j);
+            // TraceLog(LOG_WARNING, "Resetting particle with id %d", j);
             meteors[i].explosion_particles[j].position = (Vector2){-100, -100};
             meteors[i].explosion_particles[j].velocity = (Vector2){0, 0};
             meteors[i].explosion_particles[j].timeout = -1;
@@ -552,9 +551,31 @@ int main() {
       draw_text(font, TextFormat("Score %d", score), (Vector2){280, 15}, WHITE);
     }
 
+    float elapsedTime = GetTime();
+    // TraceLog(LOG_WARNING, TextFormat("Loc %d", GetShaderLocation(wave_shader, "time")));
+    SetShaderValue(wave_shader, GetShaderLocation(wave_shader, "time"), &elapsedTime, SHADER_UNIFORM_FLOAT);
     if(game_state == main_menu || game_state == controls_menu) {
       /// @todo: wave letters
-      draw_text(font, game_title, (Vector2){half_screen_width, 100}, WHITE);
+      Color a = {226, 232, 240, 255};
+      // BeginShaderMode(wave_shader);
+      // draw_text(font_title, game_title, (Vector2){half_screen_width, 100}, AQUA);
+      draw_text(font_title, "SUPER ASTEROIDS DESTROYER", (Vector2){half_screen_width, half_screen_height - 150}, a);
+      // draw_text(font_title, "\tSuper\nAsteroids\nDestroyer", (Vector2){half_screen_width, 100}, WHITE);
+
+      // draw_text(font_title, "S", (Vector2){half_screen_width, 100}, WHITE);
+      // EndShaderMode();
+
+      // elapsedTime += 1;
+      // SetShaderValue(wave_shader, GetShaderLocation(wave_shader, "time"), &elapsedTime, SHADER_UNIFORM_FLOAT);
+      // BeginShaderMode(wave_shader);
+      // draw_text(font_title, "u", (Vector2){half_screen_width + 20, 100}, WHITE);
+      // EndShaderMode();
+
+      // draw_text(font_title, "p", (Vector2){half_screen_width + 40, 100}, WHITE);
+      // draw_text(font_title, "e", (Vector2){half_screen_width + 60, 100}, WHITE);
+      // draw_text(font_title, "r", (Vector2){half_screen_width + 80, 100}, WHITE);
+
+      // EndShaderMode();
     }
 
     if (game_state == main_menu) {
