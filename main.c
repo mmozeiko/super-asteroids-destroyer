@@ -1,6 +1,9 @@
 #include "raylib.h"
 #include "raymath.h"
 
+#define STB_PERLIN_IMPLEMENTATION
+#include "stb_perlin.h"
+
 char *game_title = "Super Asteroids Destroyer";
 const int screen_width = 1280;
 const int screen_height = 720;
@@ -110,6 +113,19 @@ void spawn_meteor(Vector2 meteor_spawn_locations[12], Texture2D meteors_textures
   };
 
   meteor->texture = meteors_textures[GetRandomValue(0, 3)];
+}
+
+float noise(float x) {
+  float y = 0, z = 0, lacunarity = 2, gain = 0.5, octaves = 6;
+  return stb_perlin_fbm_noise3(x, y, z, lacunarity, gain, octaves);
+
+  //// ----- ////
+  // float y = 0, z = 0, x_wrap = 0, y_wrap = 0, z_wrap = 0;
+  // return stb_perlin_noise3_seed(x, y, z, x_wrap, y_wrap, z_wrap, time);
+}
+
+float map(float value, float startA, float stopA, float startB, float stopB) {
+  return startB + (stopB - startB) * ((value - startA) / (stopA - startA));
 }
 
 int main() {
@@ -225,6 +241,48 @@ int main() {
 
   Shader wave_shader = LoadShader("assets/wave.vs", 0);
 
+  Vector2 screen_center = {half_screen_width, half_screen_height};
+
+  Camera2D camera = {};
+  camera.target = Vector2Zero();
+  // camera.offset = (Vector2){half_screen_width, half_screen_height};
+  // camera.rotation = 0;
+  camera.zoom = 1;
+
+  float shake_magnitude = 3.4;
+  float shake_timer = 0;
+  float shake_total_time = 0.3;
+
+  /// ------ perlin
+
+  // float x = 0.0f, y = 0.0f;
+  // float frequency = 1.0f;
+  // float amplitude = 1.0f;
+  // int octaves = 4;
+  // float lacunarity = 2.0f;
+  // float persistence = 0.5f;
+
+  // // Generate Perlin noise value at position (x, y)
+  // float noiseValue = stb_perlin_fbm_noise3(x * frequency, y * frequency, 0, octaves, lacunarity, persistence) * amplitude;
+
+  /// ------
+  float camera_angle = 0;
+
+  float max_angle = 10;
+  float shake = GetRandomValue(1, 100) / 100.0;
+
+  float camera_offset_x = 0;
+  float camera_offset_y = 0;
+  float max_offset = 11;
+
+  // camera_angle = max_angle * shake * (GetRandomValue(-100, 100) / 100.0);
+
+  // camera_offset_x = max_offset * shake * (GetRandomValue(-100, 100) / 100.0);
+  // camera_offset_y = max_offset * shake * (GetRandomValue(-100, 100) / 100.0);
+  // float time = 0;
+
+  float nx = 0, ny = 100;
+
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
     /// @todo: uncomment this
@@ -259,6 +317,10 @@ int main() {
     float slowmotion_factor = is_slowmotion ? 0.05 : 1;
     if(is_slowmotion) {
       slowmotion_timer--;
+    }
+
+    if(IsKeyPressed(KEY_J)) {
+      shake_timer = shake_total_time;
     }
 
     if (IsKeyDown(KEY_A)) {
@@ -350,18 +412,35 @@ int main() {
         for(int i = 0; i < total_meteors; i++) {
           spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
           for(int j = 0; j < total_explosion_particles; j++) {
-            meteors[i].explosion_particles[j].position = (Vector2){-100, -100};
+            meteors[i].explosion_particles[j].position = (Vector2){-1000, -1000};
             meteors[i].explosion_particles[j].velocity = (Vector2){0, 0};
             meteors[i].explosion_particles[j].timeout = -1;
           }
         }
 
         for(int i = 0; i < total_bullets; i++) {
-          bullets[i].position = (Vector2){-100, -100};
+          bullets[i].position = (Vector2){-1000, -1000};
           bullets[i].velocity = (Vector2){0, 0};
           bullets[i].rotation = 0;
         }
       }
+    }
+
+    if(shake_timer > 0) {
+      shake_timer -= GetFrameTime();
+
+      // float time = GetTime();
+      float noise_x = map(noise(nx), -0.3, 0.3, -10, 10)* dt;
+      float noise_y = map(noise(ny), -0.3, 0.3, -10, 10)* dt;
+      TraceLog(LOG_WARNING, TextFormat("NX: %.2f, %.2f", noise_x, noise_y));
+      nx += 0.01;
+      ny += 0.01;
+      camera.offset.x += max_offset * noise_x;
+      camera.offset.y += max_offset * noise_y;
+    } else {
+      camera.offset.x = Lerp(camera.offset.x, 0, 0.1);
+      camera.offset.y = Lerp(camera.offset.y, 0, 0.1);
+      // camera.rotation = Lerp(camera.rotation, 0, 0.3) * DEG2RAD;
     }
 
     if(game_state == playing) {
@@ -396,7 +475,7 @@ int main() {
         || CheckCollisionCircleRec(bullets[i].position, bullets[i].radius, bottom_despawn_zone)
         || CheckCollisionCircleRec(bullets[i].position, bullets[i].radius, left_despawn_zone)) {
           bullets[i] = (Bullet){
-            {-100, -100},
+            {-1000, -1000},
             {0, 0},
             10,
             false,
@@ -416,7 +495,7 @@ int main() {
             meteors[i].explosion_particles[j].position.y += meteors[i].explosion_particles[j].velocity.y * dt * slowmotion_factor;
           } else if(meteors[i].explosion_particles[j].timeout == 0) {
             // TraceLog(LOG_WARNING, "Resetting particle with id %d", j);
-            meteors[i].explosion_particles[j].position = (Vector2){-100, -100};
+            meteors[i].explosion_particles[j].position = (Vector2){-1000, -1000};
             meteors[i].explosion_particles[j].velocity = (Vector2){0, 0};
             meteors[i].explosion_particles[j].timeout = -1;
           }
@@ -432,6 +511,7 @@ int main() {
 
         Vector2 meteor_center = {meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0};
         if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, 10)) {
+          shake_timer = shake_total_time;
           for(int j = 0; j < total_explosion_particles; j++) {
             float radians = j * DEG2RAD;
             meteors[i].explosion_particles[j] = (Explosion_Particle){
@@ -440,7 +520,6 @@ int main() {
               1 * 60,
             };
           }
-          /// @todo: camera shake
           if(--energy == 0) game_state = game_over;
           spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
           PlaySound(hurt_sfx);
@@ -449,12 +528,12 @@ int main() {
         }
         for(int j = 0; j < total_bullets; j++) {
           if(CheckCollisionCircles(meteor_center, meteors[i].radius, bullets[j].position, bullets[j].radius)) {
-            /// @todo: camera shake
+            shake_timer = shake_total_time;
             score += 100;
             spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
             PlaySound(explosion_sfx);
             bullets[j] = (Bullet){
-              {-100, -100},
+              {-1000, -1000},
               {0, 0},
               10,
               0,
@@ -479,6 +558,9 @@ int main() {
 
     BeginDrawing();
     ClearBackground(BLACK);
+    DrawText(TextFormat("(%.2f, %.2f)", camera.offset.x, camera.offset.y), 0, 0, 34, WHITE);
+    BeginMode2D(camera);
+
     for (int i = 0; i < total_stars; i++) {
       DrawCircleV(stars[i].position, stars[i].size, GRAY);
     }
@@ -614,6 +696,7 @@ int main() {
       draw_text(font, TextFormat("Score: %d", score), (Vector2){half_screen_width, half_screen_height}, AQUA);
       draw_text(font, "Press Enter to play again", (Vector2){half_screen_width, half_screen_height + 30}, WHITE);
     }
+    EndMode2D();
     EndDrawing();
   }
 
