@@ -128,11 +128,36 @@ float map(float value, float startA, float stopA, float startB, float stopB) {
   return startB + (stopB - startB) * ((value - startA) / (stopA - startA));
 }
 
+static float noise_i = 0;
+
+float noise_2d(float x, float y) {
+  float z = 0, lacunarity = 2, gain = 0.5, octaves = 3;
+  return stb_perlin_fbm_noise3(x, y, z, lacunarity, gain, octaves);
+
+  //// ----- ////
+  // float y = 0, z = 0, x_wrap = 0, y_wrap = 0, z_wrap = 0;
+  // return stb_perlin_noise3_seed(x, y, z, x_wrap, y_wrap, z_wrap, time);
+}
+
+Vector2 noise_offset(float dt, float speed, float strength) {
+  noise_i += dt * speed;
+  return (Vector2){
+    noise_2d(1, noise_i) * strength,
+    noise_2d(100, noise_i) * strength,
+  };
+}
+
 int main() {
   SetTraceLogLevel(LOG_WARNING);
   InitWindow(screen_width, screen_height, game_title);
   SetTargetFPS(60);
   InitAudioDevice();
+
+  float NOISE_SHAKE_STRENGTH = 60 * 0.4;
+  float SHAKE_DECAY_RATE = 3;
+  float shake_strength = 0;
+
+  Vector2 shake_offset = {};
 
   Font font = LoadFontEx("assets/kenney_pixel.ttf", 34, 0, 250);
   SetTextLineSpacing(34);
@@ -244,7 +269,8 @@ int main() {
   Vector2 screen_center = {half_screen_width, half_screen_height};
 
   Camera2D camera = {};
-  camera.target = Vector2Zero();
+  // camera.target = Vector2Zero();
+  camera.target = screen_center;
   // camera.offset = (Vector2){half_screen_width, half_screen_height};
   // camera.rotation = 0;
   camera.zoom = 1;
@@ -320,7 +346,8 @@ int main() {
     }
 
     if(IsKeyPressed(KEY_J)) {
-      shake_timer = shake_total_time;
+      shake_strength = NOISE_SHAKE_STRENGTH;
+      // shake_timer = shake_total_time;
     }
 
     if (IsKeyDown(KEY_A)) {
@@ -426,22 +453,28 @@ int main() {
       }
     }
 
-    if(shake_timer > 0) {
-      shake_timer -= GetFrameTime();
+    shake_strength = Lerp(shake_strength, 0, SHAKE_DECAY_RATE * dt);
+    // float NOISE_SHAKE_SPEED = 30;
+    shake_offset = noise_offset(dt, 30, shake_strength);
+    camera.offset.x = shake_offset.x + screen_center.x;
+    camera.offset.y = shake_offset.y + screen_center.y;
 
-      // float time = GetTime();
-      float noise_x = map(noise(nx), -0.3, 0.3, -10, 10)* dt;
-      float noise_y = map(noise(ny), -0.3, 0.3, -10, 10)* dt;
-      TraceLog(LOG_WARNING, TextFormat("NX: %.2f, %.2f", noise_x, noise_y));
-      nx += 0.01;
-      ny += 0.01;
-      camera.offset.x += max_offset * noise_x;
-      camera.offset.y += max_offset * noise_y;
-    } else {
-      camera.offset.x = Lerp(camera.offset.x, 0, 0.1);
-      camera.offset.y = Lerp(camera.offset.y, 0, 0.1);
-      // camera.rotation = Lerp(camera.rotation, 0, 0.3) * DEG2RAD;
-    }
+    // if(shake_timer > 0) {
+    //   shake_timer -= GetFrameTime();
+
+    //   // float time = GetTime();
+    //   float noise_x = map(noise(nx), -0.3, 0.3, -10, 10)* dt;
+    //   float noise_y = map(noise(ny), -0.3, 0.3, -10, 10)* dt;
+    //   TraceLog(LOG_WARNING, TextFormat("NX: %.2f, %.2f", noise_x, noise_y));
+    //   nx += 0.01;
+    //   ny += 0.01;
+    //   camera.offset.x += max_offset * noise_x;
+    //   camera.offset.y += max_offset * noise_y;
+    // } else {
+    //   camera.offset.x = Lerp(camera.offset.x, 0, 0.1);
+    //   camera.offset.y = Lerp(camera.offset.y, 0, 0.1);
+    //   // camera.rotation = Lerp(camera.rotation, 0, 0.3) * DEG2RAD;
+    // }
 
     if(game_state == playing) {
       ship_position.x += ship_velocity.x * dt * slowmotion_factor;
@@ -511,7 +544,7 @@ int main() {
 
         Vector2 meteor_center = {meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0};
         if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, 10)) {
-          shake_timer = shake_total_time;
+          // shake_timer = shake_total_time;
           for(int j = 0; j < total_explosion_particles; j++) {
             float radians = j * DEG2RAD;
             meteors[i].explosion_particles[j] = (Explosion_Particle){
@@ -525,10 +558,12 @@ int main() {
           PlaySound(hurt_sfx);
           score += 100;
           slowmotion_timer = 1 * 60;
+          shake_strength = NOISE_SHAKE_STRENGTH;
         }
         for(int j = 0; j < total_bullets; j++) {
           if(CheckCollisionCircles(meteor_center, meteors[i].radius, bullets[j].position, bullets[j].radius)) {
-            shake_timer = shake_total_time;
+            // shake_timer = shake_total_time;
+            shake_strength = NOISE_SHAKE_STRENGTH;
             score += 100;
             spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
             PlaySound(explosion_sfx);
