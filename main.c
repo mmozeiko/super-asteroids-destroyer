@@ -7,8 +7,9 @@
 char *game_title = "Super Asteroids Destroyer";
 const int screen_width = 1280;
 const int screen_height = 720;
-int half_screen_width = screen_width / 2;
-int half_screen_height = screen_height / 2;
+const int half_screen_width = screen_width / 2;
+const int half_screen_height = screen_height / 2;
+Vector2 screen_center = {half_screen_width, half_screen_height};
 
 typedef enum {
   main_menu,
@@ -32,6 +33,7 @@ typedef enum {
   controls_back,
 } Menu_State;
 
+/// @todo: is this really necessary?
 Menu_State menu_states[3] = {
   play,
   controls,
@@ -80,7 +82,30 @@ void draw_text(Font font, const char *text, Vector2 position, Color color) {
   DrawTextEx(font, text, (Vector2){position.x - (MeasureTextEx(font, text, font_size, spacing).x / 2.0), position.y}, font_size, spacing, color);
 }
 
-void spawn_meteor(Vector2 meteor_spawn_locations[12], Texture2D meteors_textures[4], Meteor *meteor) {
+void spawn_meteor(Texture2D meteors_textures[4], Meteor *meteor) {
+  /// @note: padding to keep the location 'inside' the screen boundaries
+  int spawn_padding = 30;
+  /// @note: offset to keep the location outside the screen
+  int spawn_offset = 30;
+  Vector2 meteor_spawn_locations[12] = {
+    /// @note: top
+    {spawn_padding, -spawn_offset},
+    {half_screen_width, -spawn_offset},
+    {screen_width - spawn_padding, -spawn_offset},
+    /// @note: right
+    {screen_width + spawn_offset, spawn_padding},
+    {screen_width + spawn_offset, half_screen_height},
+    {screen_width + spawn_offset, screen_height - spawn_padding},
+    /// @note: bottom
+    {spawn_padding, screen_height + spawn_offset},
+    {half_screen_width, screen_height + spawn_offset},
+    {screen_width - spawn_padding, screen_height + spawn_offset},
+    /// @note: left
+    {-spawn_offset, spawn_padding},
+    {-spawn_offset, half_screen_height},
+    {-spawn_offset, screen_height - spawn_padding},
+  };
+
   meteor->radius = 45;
   int location_index = GetRandomValue(0, 11);
   meteor->position = meteor_spawn_locations[location_index];
@@ -115,30 +140,12 @@ void spawn_meteor(Vector2 meteor_spawn_locations[12], Texture2D meteors_textures
   meteor->texture = meteors_textures[GetRandomValue(0, 3)];
 }
 
-float noise(float x) {
-  float y = 0, z = 0, lacunarity = 2, gain = 0.5, octaves = 6;
-  return stb_perlin_fbm_noise3(x, y, z, lacunarity, gain, octaves);
-
-  //// ----- ////
-  // float y = 0, z = 0, x_wrap = 0, y_wrap = 0, z_wrap = 0;
-  // return stb_perlin_noise3_seed(x, y, z, x_wrap, y_wrap, z_wrap, time);
-}
-
-float map(float value, float startA, float stopA, float startB, float stopB) {
-  return startB + (stopB - startB) * ((value - startA) / (stopA - startA));
-}
-
-static float noise_i = 0;
-
 float noise_2d(float x, float y) {
   float z = 0, lacunarity = 2, gain = 0.5, octaves = 3;
   return stb_perlin_fbm_noise3(x, y, z, lacunarity, gain, octaves);
-
-  //// ----- ////
-  // float y = 0, z = 0, x_wrap = 0, y_wrap = 0, z_wrap = 0;
-  // return stb_perlin_noise3_seed(x, y, z, x_wrap, y_wrap, z_wrap, time);
 }
 
+static float noise_i = 0;
 Vector2 noise_offset(float dt, float speed, float strength) {
   noise_i += dt * speed;
   return (Vector2){
@@ -147,17 +154,21 @@ Vector2 noise_offset(float dt, float speed, float strength) {
   };
 }
 
+/// @todo: decide if I will use this
+// typedef struct {
+//   float noise_i;
+//   float strength;
+//   float decay_rate;
+//   float current_strength;
+//   float speed;
+//   Vector2 offset;
+// } Camera_Shake;
+
 int main() {
   SetTraceLogLevel(LOG_WARNING);
   InitWindow(screen_width, screen_height, game_title);
   SetTargetFPS(60);
   InitAudioDevice();
-
-  float NOISE_SHAKE_STRENGTH = 60 * 0.4;
-  float SHAKE_DECAY_RATE = 3;
-  float shake_strength = 0;
-
-  Vector2 shake_offset = {};
 
   Font font = LoadFontEx("assets/kenney_pixel.ttf", 34, 0, 250);
   SetTextLineSpacing(34);
@@ -186,8 +197,8 @@ int main() {
   Star stars[total_stars] = {};
   for (int i = 0; i < total_stars; i++) {
     stars[i].position = (Vector2){
-      GetRandomValue(0, screen_width),
-      GetRandomValue(0, screen_height),
+      GetRandomValue(-1000, screen_width + 1000),
+      GetRandomValue(-1000, screen_height + 1000),
     };
     stars[i].size = GetRandomValue(1, 3);
   }
@@ -198,32 +209,10 @@ int main() {
     LoadTexture("assets/meteor2.png"),
     LoadTexture("assets/meteor3.png"),
   };
-  /// @note: padding to keep the location 'inside' the screen boundaries
-  int spawn_padding = 30;
-  /// @note: offset to keep the location outside the screen
-  int spawn_offset = 30;
-  Vector2 meteor_spawn_locations[12] = {
-    /// @note: top
-    {spawn_padding, -spawn_offset},
-    {half_screen_width, -spawn_offset},
-    {screen_width - spawn_padding, -spawn_offset},
-    /// @note: right
-    {screen_width + spawn_offset, spawn_padding},
-    {screen_width + spawn_offset, half_screen_height},
-    {screen_width + spawn_offset, screen_height - spawn_padding},
-    /// @note: bottom
-    {spawn_padding, screen_height + spawn_offset},
-    {half_screen_width, screen_height + spawn_offset},
-    {screen_width - spawn_padding, screen_height + spawn_offset},
-    /// @note: left
-    {-spawn_offset, spawn_padding},
-    {-spawn_offset, half_screen_height},
-    {-spawn_offset, screen_height - spawn_padding},
-  };
   #define total_meteors 20
   Meteor meteors[total_meteors] = {};
   for(int i = 0; i < total_meteors; i++) {
-    spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
+    spawn_meteor(meteors_textures, &meteors[i]);
   }
 
   int despawn_horizontal_zone_width = 200 + screen_width + 200;
@@ -236,7 +225,7 @@ int main() {
 
   Sound hurt_sfx = LoadSound("assets/hurt.wav");
   Texture2D ship_texture = LoadTexture("assets/ship.png");
-  Vector2 ship_position = {half_screen_width, half_screen_height};
+  Vector2 ship_position = screen_center;
   Vector2 ship_velocity = {0, 0};
   Vector2 ship_acceleration = {300, 300};
   float ship_rotation_deg = 0;
@@ -264,50 +253,31 @@ int main() {
   Bullet bullets[total_bullets] = {};
   int bullet_index = 0;
 
+  /// @todo: remove
   Shader wave_shader = LoadShader("assets/wave.vs", 0);
 
-  Vector2 screen_center = {half_screen_width, half_screen_height};
-
   Camera2D camera = {};
-  // camera.target = Vector2Zero();
   camera.target = screen_center;
-  // camera.offset = (Vector2){half_screen_width, half_screen_height};
-  // camera.rotation = 0;
   camera.zoom = 1;
 
-  float shake_magnitude = 3.4;
-  float shake_timer = 0;
-  float shake_total_time = 0.3;
+  /// @todo: decide if I will use this
+  // Camera_Shake camera_shake = {};
+  // camera_shake.noise_i = 0;
+  // camera_shake.strength = 60 * 0.4;
+  // camera_shake.decay_rate = 3;
+  // camera_shake.current_strength = 0;
+  // camera_shake.speed = 30;
+  // camera_shake.offset = (Vector2){0,0};
 
-  /// ------ perlin
+  float shake_strength = 60 * 0.4;
+  float shake_decay_rate = 3;
+  float shake_speed = 30;
+  float current_shake_strength = 0;
+  Vector2 shake_offset = {};
 
-  // float x = 0.0f, y = 0.0f;
-  // float frequency = 1.0f;
-  // float amplitude = 1.0f;
-  // int octaves = 4;
-  // float lacunarity = 2.0f;
-  // float persistence = 0.5f;
-
-  // // Generate Perlin noise value at position (x, y)
-  // float noiseValue = stb_perlin_fbm_noise3(x * frequency, y * frequency, 0, octaves, lacunarity, persistence) * amplitude;
-
-  /// ------
-  float camera_angle = 0;
-
-  float max_angle = 10;
-  float shake = GetRandomValue(1, 100) / 100.0;
-
-  float camera_offset_x = 0;
-  float camera_offset_y = 0;
-  float max_offset = 11;
-
-  // camera_angle = max_angle * shake * (GetRandomValue(-100, 100) / 100.0);
-
-  // camera_offset_x = max_offset * shake * (GetRandomValue(-100, 100) / 100.0);
-  // camera_offset_y = max_offset * shake * (GetRandomValue(-100, 100) / 100.0);
-  // float time = 0;
-
-  float nx = 0, ny = 100;
+  /// @todo: decide if I will use this
+  // float camera_angle = 0;
+  // float max_angle = 10;
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
@@ -346,8 +316,7 @@ int main() {
     }
 
     if(IsKeyPressed(KEY_J)) {
-      shake_strength = NOISE_SHAKE_STRENGTH;
-      // shake_timer = shake_total_time;
+      current_shake_strength = shake_strength;
     }
 
     if (IsKeyDown(KEY_A)) {
@@ -437,7 +406,7 @@ int main() {
         score = 0;
 
         for(int i = 0; i < total_meteors; i++) {
-          spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
+          spawn_meteor(meteors_textures, &meteors[i]);
           for(int j = 0; j < total_explosion_particles; j++) {
             meteors[i].explosion_particles[j].position = (Vector2){-1000, -1000};
             meteors[i].explosion_particles[j].velocity = (Vector2){0, 0};
@@ -453,28 +422,10 @@ int main() {
       }
     }
 
-    shake_strength = Lerp(shake_strength, 0, SHAKE_DECAY_RATE * dt);
-    // float NOISE_SHAKE_SPEED = 30;
-    shake_offset = noise_offset(dt, 30, shake_strength);
-    camera.offset.x = shake_offset.x + screen_center.x;
-    camera.offset.y = shake_offset.y + screen_center.y;
-
-    // if(shake_timer > 0) {
-    //   shake_timer -= GetFrameTime();
-
-    //   // float time = GetTime();
-    //   float noise_x = map(noise(nx), -0.3, 0.3, -10, 10)* dt;
-    //   float noise_y = map(noise(ny), -0.3, 0.3, -10, 10)* dt;
-    //   TraceLog(LOG_WARNING, TextFormat("NX: %.2f, %.2f", noise_x, noise_y));
-    //   nx += 0.01;
-    //   ny += 0.01;
-    //   camera.offset.x += max_offset * noise_x;
-    //   camera.offset.y += max_offset * noise_y;
-    // } else {
-    //   camera.offset.x = Lerp(camera.offset.x, 0, 0.1);
-    //   camera.offset.y = Lerp(camera.offset.y, 0, 0.1);
-    //   // camera.rotation = Lerp(camera.rotation, 0, 0.3) * DEG2RAD;
-    // }
+    current_shake_strength = Lerp(current_shake_strength, 0, shake_decay_rate * dt);
+    shake_offset = noise_offset(dt, shake_speed, current_shake_strength);
+    camera.offset.x = screen_center.x + shake_offset.x;
+    camera.offset.y = screen_center.y + shake_offset.y;
 
     if(game_state == playing) {
       ship_position.x += ship_velocity.x * dt * slowmotion_factor;
@@ -491,7 +442,7 @@ int main() {
       //     //   Clamp(fire_particles[i].position.x, fire_particles[i].position.x, norm_pos.x * 5),
       //     //   Clamp(fire_particles[i].position.y, fire_particles[i].position.y, norm_pos.y * 5),
       //     // };
-          fire_particles[i].timeout--;
+          fire_particles[i].timeout -= dt;
         } else if(fire_particles[i].timeout == 0) {
       //     fire_particles[i].position = (Vector2){-100, -100};
       //     fire_particles[i].velocity = (Vector2){0, 0};
@@ -539,12 +490,11 @@ int main() {
         || CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, bottom_despawn_zone)
         || CheckCollisionCircleRec(meteors[i].position, meteors[i].radius, left_despawn_zone)) {
           // TraceLog(LOG_WARNING, "Respawning meteor with index %d", i);
-          spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
+          spawn_meteor(meteors_textures, &meteors[i]);
         }
 
         Vector2 meteor_center = {meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0};
         if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, 10)) {
-          // shake_timer = shake_total_time;
           for(int j = 0; j < total_explosion_particles; j++) {
             float radians = j * DEG2RAD;
             meteors[i].explosion_particles[j] = (Explosion_Particle){
@@ -554,18 +504,17 @@ int main() {
             };
           }
           if(--energy == 0) game_state = game_over;
-          spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
+          spawn_meteor(meteors_textures, &meteors[i]);
           PlaySound(hurt_sfx);
           score += 100;
           slowmotion_timer = 1 * 60;
-          shake_strength = NOISE_SHAKE_STRENGTH;
+          current_shake_strength = shake_strength;
         }
         for(int j = 0; j < total_bullets; j++) {
           if(CheckCollisionCircles(meteor_center, meteors[i].radius, bullets[j].position, bullets[j].radius)) {
-            // shake_timer = shake_total_time;
-            shake_strength = NOISE_SHAKE_STRENGTH;
+            current_shake_strength = shake_strength;
             score += 100;
-            spawn_meteor(meteor_spawn_locations, meteors_textures, &meteors[i]);
+            spawn_meteor(meteors_textures, &meteors[i]);
             PlaySound(explosion_sfx);
             bullets[j] = (Bullet){
               {-1000, -1000},
@@ -593,7 +542,7 @@ int main() {
 
     BeginDrawing();
     ClearBackground(BLACK);
-    DrawText(TextFormat("(%.2f, %.2f)", camera.offset.x, camera.offset.y), 0, 0, 34, WHITE);
+    // DrawText(TextFormat("(%.2f, %.2f)", camera.offset.x, camera.offset.y), 0, 0, 34, WHITE);
     BeginMode2D(camera);
 
     for (int i = 0; i < total_stars; i++) {
