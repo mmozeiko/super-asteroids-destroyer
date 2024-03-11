@@ -6,8 +6,12 @@ float ship_rotation_deg = 0;
 int rotation_speed = 500;
 int ship_radius = 10;
 
-int energy = 3;
+int energy = 1;
 Sound lose_sfx;
+
+int score = 0;
+int meteor_score = 10;
+int velocity_score = 70;
 
 typedef struct {
   Vector2 position;
@@ -76,7 +80,6 @@ void draw_ship() {
     ship_rotation_deg, WHITE);
 }
 
-/// @todo: might not be the best place to have this function
 void draw_energy() {
   Color SEA_GREEN = {60, 179, 113, 255};
   Color ORANGE_RED = {255, 69, 0, 255};
@@ -87,7 +90,8 @@ void draw_energy() {
   Color color = SEA_GREEN;
   switch(energy) {
     case 2: color = ORANGE; break;
-    case 1: color = ORANGE_RED; break;
+    case 1:
+    case 0: color = ORANGE_RED; break;
   }
   float energy_block_size = (width - thickness * 2 - width_gap * 4) / 3.0;
   DrawRectangleLinesEx((Rectangle){x, y, width, height}, thickness, color);
@@ -99,4 +103,8 @@ void draw_energy() {
         height - thickness * 2 - height_gap * 2,
       }, color);
   }
+}
+
+void update_score_meteor() {
+  score += meteor_score;
 }

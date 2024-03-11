@@ -19,6 +19,7 @@ typedef enum {
   controls_menu,
   playing,
   paused,
+  hit_stop,
   game_over,
 } Game_State;
 
@@ -77,14 +78,10 @@ int main() {
   init_bullets();
   init_ship();
 
-  int slowmotion_timer = 0;
+  float slowmotion_timer = 0;
 
   Game_State game_state = main_menu;
   Menu_State menu_state = play;
-
-  int score = 0;
-  int meteor_score = 10;
-  int velocity_score = 70;
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
@@ -97,6 +94,7 @@ int main() {
         switch(game_state) {
           case playing: break;
           case paused: break;
+          case hit_stop: break;
           case game_over: break;
           case controls_menu: {
             game_state = main_menu;
@@ -126,7 +124,10 @@ int main() {
     bool is_slowmotion = slowmotion_timer > 0;
     float slowmotion_factor = is_slowmotion ? 0.05 : 1;
     if(is_slowmotion) {
-      slowmotion_timer--;
+      slowmotion_timer -= dt;
+    }
+    if(!is_slowmotion && game_state == hit_stop) {
+      game_state = game_over;
     }
 
     if (IsKeyDown(KEY_A)) {
@@ -187,7 +188,7 @@ int main() {
 
     update_camera(dt);
     update_stars();
-    update_planet();
+    update_planet(dt);
 
     if(game_state == playing) {
       update_ship(dt, slowmotion_factor);
@@ -209,12 +210,12 @@ int main() {
           set_explosion_particles(meteor_center, &meteors[i]);
           spawn_meteor(&meteors[i]);
           if(--energy == 0) {
-            game_state = game_over;
+            game_state = hit_stop;
             StopMusicStream(main_bgm);
             PlaySound(lose_sfx);
           }
-          slowmotion_timer = 1 * 60;
-          score += meteor_score;
+          slowmotion_timer = 1;
+          update_score_meteor();
           shake_camera();
         }
         bullets_check_collision_with_meteor(meteor_center, &meteors[i]);
@@ -226,9 +227,9 @@ int main() {
     BeginMode2D(camera);
 
     draw_stars();
-    draw_planet();
+    draw_planet(dt);
 
-    if (game_state == playing) {
+    if (game_state == playing || game_state == hit_stop) {
       draw_meteors();
       draw_bullets();
       draw_ship();

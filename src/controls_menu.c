@@ -12,11 +12,9 @@ void init_controls_menu() {
   key_space = LoadTexture("assets/keyboard_space.png");
 }
 
-/// @todo: hack, but works!
 void draw_text(Font font, const char *text, Vector2 position, Color color);
 
 void draw_controls_menu(Font font, bool effect_timer) {
-  /// @todo: use screen center?
   draw_text(font, "Controls", (Vector2){half_screen_width, 70}, WHITE);
   int text_y = 230;
   int keys_y = text_y + 50;

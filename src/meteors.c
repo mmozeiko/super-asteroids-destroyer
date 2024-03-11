@@ -31,10 +31,6 @@ void init_meteors() {
   }
 }
 
-void update_meteors() {
-  /// @todo: how?
-}
-
 float explosion_particle_total_timeout = 1;
 void set_explosion_particles(Vector2 meteor_center, Meteor* meteor) {
   for(int i = 0; i < total_explosion_particles; i++) {
