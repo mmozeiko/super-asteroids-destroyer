@@ -185,9 +185,12 @@ int main() {
         reset_meteors();
         reset_bullets();
         reset_ship();
+        PlayMusicStream(main_bgm);
       } else if(game_state == playing) {
         game_state = paused;
+        PauseMusicStream(main_bgm);
       } else if(game_state == paused) {
+        PlayMusicStream(main_bgm);
         game_state = playing;
       }
     }
