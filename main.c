@@ -13,6 +13,7 @@
 #include "src/ship.c"
 #include "src/controls_menu.c"
 #include "src/music.c"
+#include "src/score.c"
 
 typedef enum {
   main_menu,
@@ -82,10 +83,11 @@ int main() {
 
   Game_State game_state = main_menu;
   Menu_State menu_state = play;
+  score_t highscore = load_highscore();
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
-    // update_music(dt);
+    update_music(dt);
 
     if (select_effect_timer > 0) {
       select_effect_timer -= dt;
@@ -128,6 +130,10 @@ int main() {
     }
     if(!is_slowmotion && game_state == hit_stop) {
       game_state = game_over;
+      if(score > highscore) {
+        save_highscore();
+        highscore = score;
+      }
     }
 
     if (IsKeyDown(KEY_A)) {
@@ -205,7 +211,7 @@ int main() {
         }
 
         Vector2 meteor_center = {meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0};
-        if(false && CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, ship_radius)) {
+        if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, ship_radius)) {
           PlaySound(hurt_sfx);
           set_explosion_particles(meteor_center, &meteors[i]);
           spawn_meteor(&meteors[i]);
@@ -230,11 +236,11 @@ int main() {
     draw_planet(dt);
 
     if (game_state == playing || game_state == hit_stop) {
-      // draw_meteors();
-      // draw_bullets();
+      draw_meteors();
+      draw_bullets();
       draw_ship();
-      // draw_energy();
-      // draw_text(font, TextFormat("Score %d", score), (Vector2){280, 15}, WHITE);
+      draw_energy();
+      draw_text(font, TextFormat("Score %d", score), (Vector2){280, 15}, WHITE);
     }
     EndMode2D();
 
@@ -254,6 +260,7 @@ int main() {
     } else if(game_state == game_over) {
       draw_text(font_title, "GAME OVER", (Vector2){half_screen_width, half_screen_height - 150}, RED);
       draw_text(font, TextFormat("Score: %d", score), (Vector2){half_screen_width, half_screen_height - 50}, AQUA);
+      draw_text(font, TextFormat("Highscore: %d", highscore), (Vector2){half_screen_width, half_screen_height - 100}, AQUA);
       draw_text(font, "Press Enter to play again", (Vector2){half_screen_width, half_screen_height}, WHITE);
     } else if(game_state == paused) {
       draw_text(font_title, "PAUSED", (Vector2){half_screen_width, half_screen_height}, WHITE);

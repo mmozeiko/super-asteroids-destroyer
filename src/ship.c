@@ -7,12 +7,8 @@ int rotation_speed = 500;
 int ship_radius = 10;
 Texture2D fire_texture;
 
-int energy = 100;
+int energy = 3;
 Sound lose_sfx;
-
-int score = 0;
-int meteor_score = 10;
-int velocity_score = 70;
 
 bool is_fire_visible = false;
 
@@ -84,8 +80,4 @@ void draw_energy() {
         height - thickness * 2 - height_gap * 2,
       }, color);
   }
-}
-
-void update_score_meteor() {
-  score += meteor_score;
 }

@@ -27,7 +27,7 @@ void shoot_bullet(Vector2 position, float rotation) {
     (Vector2){direction.x * 100 * 5, direction.y * 100 * 5},
     rotation,
   };
-  bullet_index = bullet_index >= total_bullets ? 0 : bullet_index + 1;
+  bullet_index = bullet_index < total_bullets - 1 ? bullet_index + 1 : 0;
 }
 
 void reset_bullet(int index) {
