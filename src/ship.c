@@ -4,9 +4,19 @@ Vector2 ship_velocity = {0, 0};
 Vector2 ship_acceleration = {300, 300};
 float ship_rotation_deg = 0;
 int rotation_speed = 500;
+int ship_radius = 10;
 
 int energy = 3;
 Sound lose_sfx;
+
+typedef struct {
+  Vector2 position;
+  Vector2 velocity;
+} Fire_Particle;
+
+#define total_fire_particles 200
+Fire_Particle fire_particles[total_fire_particles] = {};
+bool is_fire_particles_visible = false;
 
 void init_ship() {
   lose_sfx = LoadSound("assets/lose.wav");
@@ -19,6 +29,12 @@ void accelerate_ship(float dt, float slowmotion_factor) {
   Vector2 direction = {sin(radians), -cos(radians)};
   ship_velocity.x += direction.x * ship_acceleration.x * dt * slowmotion_factor;
   ship_velocity.y += direction.y * ship_acceleration.y * dt * slowmotion_factor;
+
+  for(int i = 0; i < total_fire_particles; i++) {
+    fire_particles[i].position = (Vector2){(ship_position.x - direction.x) * ship_radius, (ship_position.y - direction.y) * ship_radius};
+    fire_particles[i].velocity = (Vector2){-direction.x * 100, -direction.y * 100};
+  }
+  is_fire_particles_visible = true;
 }
 
 void update_ship(float dt, float slowmotion_factor) {
@@ -26,6 +42,16 @@ void update_ship(float dt, float slowmotion_factor) {
   ship_position.y += ship_velocity.y * dt * slowmotion_factor;
   ship_position.x = Wrap(ship_position.x, 0, screen_width);
   ship_position.y = Wrap(ship_position.y, 0, screen_height);
+
+  for(int i = 0; i < total_fire_particles; i++) {
+    // fire_particles[i].position.x += fire_particles[i].velocity.x * dt * slowmotion_factor;
+    // fire_particles[i].position.y += fire_particles[i].velocity.y * dt * slowmotion_factor;
+    // Vector2 norm_pos = Vector2Normalize(fire_particles[i].position);
+    // fire_particles[i].position = (Vector2){
+    //   Clamp(fire_particles[i].position.x, fire_particles[i].position.x, norm_pos.x * 5),
+    //   Clamp(fire_particles[i].position.y, fire_particles[i].position.y, norm_pos.y * 5),
+    // };
+  }
 }
 
 void reset_ship() {
@@ -36,6 +62,13 @@ void reset_ship() {
 }
 
 void draw_ship() {
+  for(int i = 0; i < total_fire_particles; i++) {
+    if(is_fire_particles_visible) {
+      DrawCircleV(fire_particles[i].position, 3, RED);
+    }
+  }
+  is_fire_particles_visible = false;
+
   DrawTexturePro(ship_texture,
     (Rectangle){0, 0, ship_texture.width, ship_texture.height},
     (Rectangle){ship_position.x, ship_position.y, ship_texture.width, ship_texture.height},

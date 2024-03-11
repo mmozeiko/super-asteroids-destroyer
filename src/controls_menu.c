@@ -4,12 +4,6 @@ Texture2D key_w;
 Texture2D key_enter;
 Texture2D key_space;
 
-/// @todo: remove
-// typedef enum {
-//   back,
-// } Controls_Menu_State;
-// Controls_Menu_State controls_menu_state = back;
-
 void init_controls_menu() {
   key_a = LoadTexture("assets/keyboard_a.png");
   key_d = LoadTexture("assets/keyboard_d.png");

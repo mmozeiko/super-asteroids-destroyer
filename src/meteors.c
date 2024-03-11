@@ -79,6 +79,7 @@ void draw_meteors() {
     for(int j = 0; j < total_explosion_particles; j++) {
       int timeout = meteors[i].explosion_particles[j].timeout;
       if(timeout > 0) {
+        /// @todo: fade to blank
         Color c = {255, 255, 255, 255 * 0};
         DrawCircleV(meteors[i].explosion_particles[j].position, 1, WHITE);
       }

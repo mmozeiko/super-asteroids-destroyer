@@ -28,12 +28,6 @@ typedef enum {
   exit,
 } Menu_State;
 
-typedef struct {
-  Vector2 position;
-  Vector2 velocity;
-  int timeout;
-} Fire_Particle;
-
 void draw_text(Font font, const char *text, Vector2 position, Color color) {
   int font_size = 34, spacing = 1;
   DrawTextEx(font, text, (Vector2){position.x - (MeasureTextEx(font, text, font_size, spacing).x / 2.0), position.y}, font_size, spacing, color);
@@ -82,9 +76,6 @@ int main() {
   init_planet();
   init_bullets();
   init_ship();
-
-  #define total_fire_particles 200
-  Fire_Particle fire_particles[total_fire_particles] = {};
 
   int slowmotion_timer = 0;
 
@@ -149,15 +140,6 @@ int main() {
       if (game_state == playing) {
         accelerate_ship(dt, slowmotion_factor);
         score += velocity_score;
-
-        /// @todo: fire
-        // for(int i = 0; i < total_fire_particles; i++) {
-        //   fire_particles[i].position = (Vector2){GetRandomValue(ship_position.x - 5, ship_position.x + 5), GetRandomValue(ship_position.y - 5, ship_position.y + 5)};
-        //   fire_particles[i].velocity = (Vector2){direction.x * 100 * -5, direction.y * 100 * -5};
-        //   fire_particles[i].position.x += fire_particles[i].velocity.x * dt * slowmotion_factor;
-        //   fire_particles[i].position.y += fire_particles[i].velocity.y * dt * slowmotion_factor;
-        //   fire_particles[i].timeout = 0.1 * 60;
-        // }
       }
     }
     if(IsKeyPressed(KEY_SPACE)) {
@@ -210,28 +192,6 @@ int main() {
       update_ship(dt, slowmotion_factor);
       update_bullets(dt, slowmotion_factor);
 
-      /// @todo: fire
-      // for(int i = 0; i < total_fire_particles; i++) {
-      //   if(fire_particles[i].timeout > 0) {
-      //     if(false){
-      //     fire_particles[i].position.x += fire_particles[i].velocity.x * dt * slowmotion_factor;
-      //     fire_particles[i].position.y += fire_particles[i].velocity.y * dt * slowmotion_factor;
-      //     Vector2 norm_pos = Vector2Normalize(fire_particles[i].position);
-      //     fire_particles[i].position = (Vector2){
-      //       Clamp(fire_particles[i].position.x, fire_particles[i].position.x, norm_pos.x * 5),
-      //       Clamp(fire_particles[i].position.y, fire_particles[i].position.y, norm_pos.y * 5),
-      //     };
-      //     }
-      //     fire_particles[i].timeout -= dt;
-      //   } else if(fire_particles[i].timeout == 0) {
-      //     if(false){
-      //     fire_particles[i].position = (Vector2){-100, -100};
-      //     fire_particles[i].velocity = (Vector2){0, 0};
-      //     }
-      //     fire_particles[i].timeout = -1;
-      //   }
-      // }
-
       for(int i = 0; i < total_meteors; i++) {
         meteors[i].position.x += meteors[i].velocity.x * dt * slowmotion_factor;
         meteors[i].position.y += meteors[i].velocity.y * dt * slowmotion_factor;
@@ -243,7 +203,7 @@ int main() {
         }
 
         Vector2 meteor_center = {meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0};
-        if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, 10)) {
+        if(false && CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, ship_radius)) {
           PlaySound(hurt_sfx);
           set_explosion_particles(meteor_center, &meteors[i]);
           spawn_meteor(&meteors[i]);
@@ -268,13 +228,8 @@ int main() {
     draw_planet();
 
     if (game_state == playing) {
-      draw_meteors();
+      // draw_meteors();
       draw_bullets();
-      /// @todo: fire
-      // for(int i = 0; i < total_fire_particles; i++) {
-      //   if(fire_particles[i].timeout > 0)
-      //     DrawCircleV(fire_particles[i].position, 2, RED);
-      // }
       draw_ship();
       draw_energy();
       draw_text(font, TextFormat("Score %d", score), (Vector2){280, 15}, WHITE);
