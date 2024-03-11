@@ -65,8 +65,8 @@ int main() {
   Sound hurt_sfx = LoadSound("assets/hurt.wav");
   Sound click_sfx = LoadSound("assets/click.wav");
   Sound select_sfx = LoadSound("assets/select.wav");
-  int select_effect_timer = 0;
-  float select_effect_total_time = 60 * 0.5;
+  float select_effect_timer = 0;
+  float select_effect_total_time = 0.6;
 
   init_music();
   init_controls_menu();
@@ -88,11 +88,12 @@ int main() {
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
-    update_music();
+    update_music(dt);
 
     if (select_effect_timer > 0) {
-      select_effect_timer--;
-      if (select_effect_timer == 0) {
+      select_effect_timer -= dt;
+      if (select_effect_timer < 0) {
+        select_effect_timer = 0;
         switch(game_state) {
           case playing: break;
           case paused: break;
@@ -203,7 +204,7 @@ int main() {
         }
 
         Vector2 meteor_center = {meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0};
-        if(false && CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, ship_radius)) {
+        if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, ship_radius)) {
           PlaySound(hurt_sfx);
           set_explosion_particles(meteor_center, &meteors[i]);
           spawn_meteor(&meteors[i]);
@@ -228,7 +229,7 @@ int main() {
     draw_planet();
 
     if (game_state == playing) {
-      // draw_meteors();
+      draw_meteors();
       draw_bullets();
       draw_ship();
       draw_energy();
@@ -236,9 +237,9 @@ int main() {
     }
     EndMode2D();
 
+    bool effect_timer = 0.1 < select_effect_timer && 0.5 < select_effect_timer;
     if (game_state == main_menu) {
       draw_text(font_title, TextToUpper(game_title), (Vector2){half_screen_width, half_screen_height - 150}, (Color){226, 232, 240, 255});
-      bool effect_timer = 8 < select_effect_timer && 24 < select_effect_timer;
 
       draw_text(font, "Start", (Vector2){half_screen_width, half_screen_height},
                  menu_state == play && !effect_timer ? AQUA : WHITE);
@@ -248,7 +249,6 @@ int main() {
       draw_text(font, "Exit", (Vector2){half_screen_width, half_screen_height + 40 * 2},
                 menu_state == exit && !effect_timer ? AQUA : WHITE);
     } else if (game_state == controls_menu) {
-      bool effect_timer = 8 < select_effect_timer && 24 < select_effect_timer;
       draw_controls_menu(font, effect_timer);
     } else if(game_state == game_over) {
       draw_text(font_title, "GAME OVER", (Vector2){half_screen_width, half_screen_height - 150}, RED);

@@ -1,7 +1,7 @@
 typedef struct {
   Vector2 position;
   Vector2 velocity;
-  int timeout;
+  float timeout;
 } Explosion_Particle;
 
 #define total_explosion_particles 360
@@ -35,13 +35,14 @@ void update_meteors() {
   /// @todo: how?
 }
 
+float explosion_particle_total_timeout = 1;
 void set_explosion_particles(Vector2 meteor_center, Meteor* meteor) {
   for(int i = 0; i < total_explosion_particles; i++) {
     float radians = i * DEG2RAD;
     meteor->explosion_particles[i] = (Explosion_Particle){
       meteor_center,
       (Vector2){cos(radians) * GetRandomValue(50, 150), -sin(radians) * GetRandomValue(50, 150)},
-      1 * 60,
+      explosion_particle_total_timeout,
     };
   }
 }
@@ -49,12 +50,10 @@ void set_explosion_particles(Vector2 meteor_center, Meteor* meteor) {
 void update_explosion_particles(Meteor* meteor, float dt, bool is_slowmotion, float slowmotion_factor) {
   for(int i = 0; i < total_explosion_particles; i++) {
     if(meteor->explosion_particles[i].timeout > 0) {
-      if(!is_slowmotion)
-        meteor->explosion_particles[i].timeout--;
+      meteor->explosion_particles[i].timeout -= dt * slowmotion_factor;
       meteor->explosion_particles[i].position.x += meteor->explosion_particles[i].velocity.x * dt * slowmotion_factor;
       meteor->explosion_particles[i].position.y += meteor->explosion_particles[i].velocity.y * dt * slowmotion_factor;
-    } else if(meteor->explosion_particles[i].timeout == 0) {
-      /// @todo: is there a way to simplify this?
+    } else {
       meteor->explosion_particles[i].position = (Vector2){-1000, -1000};
       meteor->explosion_particles[i].velocity = (Vector2){0, 0};
       meteor->explosion_particles[i].timeout = -1;
@@ -77,11 +76,10 @@ void draw_meteors() {
   for(int i = 0; i < total_meteors; i++) {
     DrawTextureV(meteors[i].texture, meteors[i].position, WHITE);
     for(int j = 0; j < total_explosion_particles; j++) {
-      int timeout = meteors[i].explosion_particles[j].timeout;
+      float timeout = meteors[i].explosion_particles[j].timeout;
       if(timeout > 0) {
-        /// @todo: fade to blank
-        Color c = {255, 255, 255, 255 * 0};
-        DrawCircleV(meteors[i].explosion_particles[j].position, 1, WHITE);
+        float fade_percent = timeout / explosion_particle_total_timeout;
+        DrawCircleV(meteors[i].explosion_particles[j].position, 1, (Color){255, 255, 255, 255 * fade_percent});
       }
     }
   }
