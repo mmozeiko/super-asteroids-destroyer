@@ -9,10 +9,12 @@ Texture2D bullet_texture;
 #define total_bullets 100
 Bullet bullets[total_bullets] = {};
 int bullet_index = 0;
+Sound explosion_sfx;
 
 void reset_bullets();
 
 void init_bullets() {
+  explosion_sfx = LoadSound("assets/boom.wav");
   bullet_texture = LoadTexture("assets/bullet.png");
   reset_bullets();
 }
@@ -51,6 +53,20 @@ void update_bullets(float dt, float slowmotion_factor) {
     bullets[i].position.y += bullets[i].velocity.y * dt * slowmotion_factor;
 
     if(is_out_of_bounds(bullets[i].position)) {
+      reset_bullet(i);
+    }
+  }
+}
+
+void bullets_check_collision_with_meteor(Vector2 meteor_center, Meteor* meteor) {
+  for(int i = 0; i < total_bullets; i++) {
+    if(CheckCollisionCircles(meteor_center, meteor->radius, bullets[i].position, bullet_radius)) {
+      shake_camera();
+      /// @todo: refactor
+      // score += meteor_score;
+      PlaySound(explosion_sfx);
+      set_explosion_particles(meteor_center, meteor);
+      spawn_meteor(meteor);
       reset_bullet(i);
     }
   }

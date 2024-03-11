@@ -20,6 +20,10 @@ void update_camera(float dt) {
   camera.offset.y = screen_center.y + noise_2d(100, noise_time_acc) * current_shake_strength;
 }
 
+void shake_camera() {
+  current_shake_strength = shake_strength;
+}
+
 float noise_2d(float x, float y) {
   float z = 0, lacunarity = 2, gain = 0.5, octaves = 3;
   return stb_perlin_fbm_noise3(x, y, z, lacunarity, gain, octaves);

@@ -46,6 +46,22 @@ void set_explosion_particles(Vector2 meteor_center, Meteor* meteor) {
   }
 }
 
+void update_explosion_particles(Meteor* meteor, float dt, bool is_slowmotion, float slowmotion_factor) {
+  for(int i = 0; i < total_explosion_particles; i++) {
+    if(meteor->explosion_particles[i].timeout > 0) {
+      if(!is_slowmotion)
+        meteor->explosion_particles[i].timeout--;
+      meteor->explosion_particles[i].position.x += meteor->explosion_particles[i].velocity.x * dt * slowmotion_factor;
+      meteor->explosion_particles[i].position.y += meteor->explosion_particles[i].velocity.y * dt * slowmotion_factor;
+    } else if(meteor->explosion_particles[i].timeout == 0) {
+      /// @todo: is there a way to simplify this?
+      meteor->explosion_particles[i].position = (Vector2){-1000, -1000};
+      meteor->explosion_particles[i].velocity = (Vector2){0, 0};
+      meteor->explosion_particles[i].timeout = -1;
+    }
+  }
+}
+
 void reset_meteors() {
   for(int i = 0; i < total_meteors; i++) {
     spawn_meteor(&meteors[i]);
@@ -61,7 +77,9 @@ void draw_meteors() {
   for(int i = 0; i < total_meteors; i++) {
     DrawTextureV(meteors[i].texture, meteors[i].position, WHITE);
     for(int j = 0; j < total_explosion_particles; j++) {
-      if(meteors[i].explosion_particles[j].timeout > 0) {
+      int timeout = meteors[i].explosion_particles[j].timeout;
+      if(timeout > 0) {
+        Color c = {255, 255, 255, 255 * 0};
         DrawCircleV(meteors[i].explosion_particles[j].position, 1, WHITE);
       }
     }
