@@ -5,8 +5,9 @@ Vector2 ship_acceleration = {300, 300};
 float ship_rotation_deg = 0;
 int rotation_speed = 500;
 int ship_radius = 10;
+Texture2D fire_texture;
 
-int energy = 1;
+int energy = 100;
 Sound lose_sfx;
 
 int score = 0;
@@ -24,6 +25,7 @@ bool is_fire_particles_visible = false;
 
 void init_ship() {
   lose_sfx = LoadSound("assets/lose.wav");
+  fire_texture = LoadTexture("assets/fire.png");
   ship_texture = LoadTexture("assets/ship.png");
   ship_position = screen_center;
 }
@@ -34,9 +36,10 @@ void accelerate_ship(float dt, float slowmotion_factor) {
   ship_velocity.x += direction.x * ship_acceleration.x * dt * slowmotion_factor;
   ship_velocity.y += direction.y * ship_acceleration.y * dt * slowmotion_factor;
 
+  // Vector2 opposise_direction = {-direction.x, -direction.y};
   for(int i = 0; i < total_fire_particles; i++) {
-    fire_particles[i].position = (Vector2){(ship_position.x - direction.x) * ship_radius, (ship_position.y - direction.y) * ship_radius};
-    fire_particles[i].velocity = (Vector2){-direction.x * 100, -direction.y * 100};
+    fire_particles[i].position = (Vector2){ship_position.x - direction.x * ship_radius, ship_position.y - direction.y * ship_radius};
+    fire_particles[i].velocity = (Vector2){-direction.x * 500, -direction.y * 500};
   }
   is_fire_particles_visible = true;
 }
@@ -48,13 +51,13 @@ void update_ship(float dt, float slowmotion_factor) {
   ship_position.y = Wrap(ship_position.y, 0, screen_height);
 
   for(int i = 0; i < total_fire_particles; i++) {
-    // fire_particles[i].position.x += fire_particles[i].velocity.x * dt * slowmotion_factor;
-    // fire_particles[i].position.y += fire_particles[i].velocity.y * dt * slowmotion_factor;
-    // Vector2 norm_pos = Vector2Normalize(fire_particles[i].position);
-    // fire_particles[i].position = (Vector2){
-    //   Clamp(fire_particles[i].position.x, fire_particles[i].position.x, norm_pos.x * 5),
-    //   Clamp(fire_particles[i].position.y, fire_particles[i].position.y, norm_pos.y * 5),
-    // };
+    fire_particles[i].position.x += fire_particles[i].velocity.x * dt * slowmotion_factor;
+    fire_particles[i].position.y += fire_particles[i].velocity.y * dt * slowmotion_factor;
+    Vector2 norm_pos = Vector2Normalize(fire_particles[i].position);
+    fire_particles[i].position = (Vector2){
+      Clamp(fire_particles[i].position.x, fire_particles[i].position.x, fire_particles[i].position.x + norm_pos.x * 125),
+      Clamp(fire_particles[i].position.y, fire_particles[i].position.y, fire_particles[i].position.y + norm_pos.y * 125),
+    };
   }
 }
 
@@ -66,18 +69,24 @@ void reset_ship() {
 }
 
 void draw_ship() {
-  for(int i = 0; i < total_fire_particles; i++) {
-    if(is_fire_particles_visible) {
-      DrawCircleV(fire_particles[i].position, 3, RED);
-    }
+  if(is_fire_particles_visible) {
+    DrawTexturePro(fire_texture,
+      (Rectangle){0, 0, fire_texture.width, fire_texture.height},
+      (Rectangle){ship_position.x, ship_position.y, fire_texture.width, fire_texture.height},
+      (Vector2){fire_texture.width / 2.0, 0},
+      ship_rotation_deg, WHITE);
   }
-  is_fire_particles_visible = false;
-
   DrawTexturePro(ship_texture,
     (Rectangle){0, 0, ship_texture.width, ship_texture.height},
     (Rectangle){ship_position.x, ship_position.y, ship_texture.width, ship_texture.height},
     (Vector2){ship_texture.width / 2.0, ship_texture.height / 2.0},
     ship_rotation_deg, WHITE);
+  // for(int i = 0; i < total_fire_particles; i++) {
+  //   if(is_fire_particles_visible) {
+  //     DrawCircleV(fire_particles[i].position, 5, RED);
+  //   }
+  // }
+  // is_fire_particles_visible = false;
 }
 
 void draw_energy() {

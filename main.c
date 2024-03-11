@@ -85,7 +85,7 @@ int main() {
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
-    update_music(dt);
+    // update_music(dt);
 
     if (select_effect_timer > 0) {
       select_effect_timer -= dt;
@@ -205,7 +205,7 @@ int main() {
         }
 
         Vector2 meteor_center = {meteors[i].position.x + meteors[i].texture.width / 2.0, meteors[i].position.y + meteors[i].texture.height / 2.0};
-        if(CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, ship_radius)) {
+        if(false && CheckCollisionCircles(meteor_center, meteors[i].radius, ship_position, ship_radius)) {
           PlaySound(hurt_sfx);
           set_explosion_particles(meteor_center, &meteors[i]);
           spawn_meteor(&meteors[i]);
@@ -230,11 +230,11 @@ int main() {
     draw_planet(dt);
 
     if (game_state == playing || game_state == hit_stop) {
-      draw_meteors();
-      draw_bullets();
+      // draw_meteors();
+      // draw_bullets();
       draw_ship();
-      draw_energy();
-      draw_text(font, TextFormat("Score %d", score), (Vector2){280, 15}, WHITE);
+      // draw_energy();
+      // draw_text(font, TextFormat("Score %d", score), (Vector2){280, 15}, WHITE);
     }
     EndMode2D();
 
