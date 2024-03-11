@@ -190,8 +190,8 @@ int main() {
         game_state = paused;
         PauseMusicStream(main_bgm);
       } else if(game_state == paused) {
-        PlayMusicStream(main_bgm);
         game_state = playing;
+        PlayMusicStream(main_bgm);
       }
     }
 
@@ -236,7 +236,7 @@ int main() {
     BeginMode2D(camera);
 
     draw_stars();
-    draw_planet(dt);
+    draw_planet();
 
     if (game_state == playing || game_state == hit_stop) {
       draw_meteors();

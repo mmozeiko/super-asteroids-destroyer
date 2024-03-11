@@ -9,28 +9,15 @@ void update_score_meteor() {
 }
 
 void save_highscore() {
-  TraceLog(LOG_WARNING, "Calling save highscore");
-  if(FileExists(save_file)) {
-    if(SaveFileData(save_file, &score, sizeof(score))) {
-      TraceLog(LOG_WARNING, "Save file success - exist");
-    } else {
-      TraceLog(LOG_WARNING, "Save file error - exist");
-    }
-  } else {
-    if(SaveFileData(save_file, &score, sizeof(score))) {
-      TraceLog(LOG_WARNING, "Save file success");
-    } else {
-      TraceLog(LOG_WARNING, "Save file error");
-    }
-  }
+  SaveFileData(save_file, &score, sizeof(score));
 }
 
 score_t load_highscore() {
   if(FileExists(save_file)) {
     int size = sizeof(score);
-    unsigned char* raw_highscore = LoadFileData(save_file, &size);
-    score_t loaded_highscore = *(long*)raw_highscore;
-    UnloadFileData(raw_highscore);
+    unsigned char* bytes_highscore = LoadFileData(save_file, &size);
+    score_t loaded_highscore = *(long*)bytes_highscore;
+    UnloadFileData(bytes_highscore);
     return loaded_highscore;
   } else return 0;
 }

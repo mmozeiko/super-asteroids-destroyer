@@ -13,7 +13,7 @@ void update_planet(float dt) {
     gas_rotation = 0;
 }
 
-void draw_planet(float dt) {
+void draw_planet() {
   DrawTextureV(planet_texture, (Vector2){half_screen_width - 200, half_screen_height - 100}, WHITE);
   DrawTexturePro(planet_gas_texture,
     (Rectangle){0, 0, planet_gas_texture.width, planet_gas_texture.height},
