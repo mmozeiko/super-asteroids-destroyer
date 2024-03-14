@@ -67,6 +67,7 @@ int main() {
   Sound hurt_sfx = LoadSound("assets/hurt.wav");
   Sound click_sfx = LoadSound("assets/click.wav");
   Sound select_sfx = LoadSound("assets/select.wav");
+  Sound booster_sfx = LoadSound("assets/booster.ogg");
   float select_effect_timer = 0;
   float select_effect_total_time = 0.6;
 
@@ -148,7 +149,12 @@ int main() {
       if (game_state == playing) {
         accelerate_ship(dt, slowmotion_factor);
         score += velocity_score;
+        if(!IsSoundPlaying(booster_sfx))
+          PlaySound(booster_sfx);
       }
+    } else {
+      if(IsSoundPlaying(booster_sfx))
+          StopSound(booster_sfx);
     }
     if(IsKeyPressed(KEY_SPACE)) {
       if (game_state == playing) {
