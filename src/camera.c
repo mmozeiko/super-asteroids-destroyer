@@ -16,7 +16,7 @@ void init_camera() {
 void update_camera(float dt) {
   current_shake_strength = Lerp(current_shake_strength, 0, shake_decay_rate * dt);
   noise_time_acc += dt * shake_speed;
-  camera.offset.x = screen_center.x + noise_2d(1, noise_time_acc) * current_shake_strength;
+  camera.offset.x = screen_center.x + noise_2d(1,   noise_time_acc) * current_shake_strength;
   camera.offset.y = screen_center.y + noise_2d(100, noise_time_acc) * current_shake_strength;
 }
 

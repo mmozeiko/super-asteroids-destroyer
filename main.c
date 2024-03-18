@@ -59,8 +59,6 @@ int main() {
   InitAudioDevice();
 
   Font font = LoadFontEx("assets/kenney_pixel.ttf", 34, 0, 250);
-  SetTextLineSpacing(34);
-
   Font font_title = LoadFontEx("assets/not_jam_slab_14.ttf", 34, 0, 250);
   SetTextLineSpacing(34);
 
