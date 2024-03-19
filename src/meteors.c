@@ -24,6 +24,7 @@ Meteor meteors[total_meteors] = {};
 void init_meteors() {
   for(int i = 0; i < total_meteors_textures; i++) {
     meteors_textures[i] = LoadTexture(TextFormat("assets/meteor%d.png", i));
+    SetTextureFilter(meteors_textures[i], TEXTURE_FILTER_BILINEAR);
   }
 
   for(int i = 0; i < total_meteors; i++) {

@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include "raymath.h"
+#include "rlgl.h"
 
 #define STB_PERLIN_IMPLEMENTATION
 #include "vendor/stb_perlin.h"
@@ -52,6 +53,45 @@ bool is_out_of_bounds(Vector2 position) {
   return false;
 }
 
+// these are from rlLoadShaderDefault() function with minor modifications
+
+const char* vsShader =
+    "#version 330                       \n"
+    "in vec3 vertexPosition;            \n"
+    "in vec2 vertexTexCoord;            \n"
+    "in vec4 vertexColor;               \n"
+    "out vec2 fragTexCoord;             \n"
+    "out vec4 fragColor;                \n"
+    "uniform mat4 mvp;                  \n"
+    "void main()                        \n"
+    "{                                  \n"
+    "    fragTexCoord = vertexTexCoord; \n"
+    "    fragColor = vertexColor;       \n"
+    "    gl_Position = mvp*vec4(vertexPosition, 1.0); \n"
+    "}                                  \n";
+;
+
+const char* fsShader =
+    "#version 330       \n"
+    "in vec2 fragTexCoord;              \n"
+    "in vec4 fragColor;                 \n"
+    "out vec4 finalColor;               \n"
+    "uniform sampler2D texture0;        \n"
+    "uniform vec4 colDiffuse;           \n"
+    "void main()                        \n"
+    "{                                  \n"
+    "    vec2 uv = fragTexCoord;                                    \n"
+    "    vec2 texsize = vec2(textureSize(texture0,0));              \n"
+    "    vec2 uv_texspace = uv*texsize;                             \n"
+    "    vec2 seam = floor(uv_texspace+.5);                         \n"
+    "    uv_texspace = (uv_texspace-seam)/fwidth(uv_texspace)+seam; \n"
+    "    uv_texspace = clamp(uv_texspace, seam-.5, seam+.5);        \n"
+    "    uv = uv_texspace/texsize;                                  \n"
+    "    vec4 texelColor = texture(texture0, uv);                   \n"
+    "    finalColor = texelColor*colDiffuse*fragColor;              \n"
+    "}                                  \n";
+;
+
 int main() {
   SetTraceLogLevel(LOG_WARNING);
   InitWindow(screen_width, screen_height, game_title);
@@ -77,6 +117,8 @@ int main() {
   init_planet();
   init_bullets();
   init_ship();
+
+  Shader shader = LoadShaderFromMemory(vsShader, fsShader);
 
   float slowmotion_timer = 0;
 
@@ -239,6 +281,9 @@ int main() {
     ClearBackground(BLACK);
     BeginMode2D(camera);
 
+    BeginShaderMode(shader);
+    BeginBlendMode(BLEND_ALPHA_PREMULTIPLY);
+
     draw_stars();
     draw_planet();
 
@@ -247,6 +292,10 @@ int main() {
       draw_bullets();
       draw_ship();
       draw_energy();
+    }
+    EndBlendMode();
+    EndShaderMode();
+    if (game_state == playing || game_state == hit_stop) {
       draw_text(font, TextFormat("Score %d", score), (Vector2){280, 15}, WHITE);
     }
     EndMode2D();

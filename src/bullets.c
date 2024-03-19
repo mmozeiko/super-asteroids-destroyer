@@ -16,6 +16,7 @@ void reset_bullets();
 void init_bullets() {
   explosion_sfx = LoadSound("assets/boom.wav");
   bullet_texture = LoadTexture("assets/bullet.png");
+  SetTextureFilter(bullet_texture, TEXTURE_FILTER_BILINEAR);
   reset_bullets();
 }
 

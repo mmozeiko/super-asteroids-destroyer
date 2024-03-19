@@ -5,6 +5,8 @@ float gas_rotation = 0;
 void init_planet() {
   planet_texture = LoadTexture("assets/planet.png");
   planet_gas_texture = LoadTexture("assets/planet_gas.png");
+  SetTextureFilter(planet_texture, TEXTURE_FILTER_BILINEAR);
+  SetTextureFilter(planet_gas_texture, TEXTURE_FILTER_BILINEAR);
 }
 
 void update_planet(float dt) {

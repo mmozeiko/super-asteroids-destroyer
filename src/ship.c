@@ -16,6 +16,8 @@ void init_ship() {
   lose_sfx = LoadSound("assets/lose.wav");
   fire_texture = LoadTexture("assets/fire.png");
   ship_texture = LoadTexture("assets/ship.png");
+  SetTextureFilter(fire_texture, TEXTURE_FILTER_BILINEAR);
+  SetTextureFilter(ship_texture, TEXTURE_FILTER_BILINEAR);
   ship_position = screen_center;
 }
 
